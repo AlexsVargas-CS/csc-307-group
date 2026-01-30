@@ -15,7 +15,9 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --write \"packages/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"packages/**/*.{js,jsx,ts,tsx,json,css,md}\""
   },
   "dependencies": {
     "acorn": "^8.15.0",
@@ -229,7 +231,7 @@
     "globals": "^17.2.0",
     "prettier": "^3.8.1"
   },
-   "workspaces": [
-	   "packages/*"
-   ]
+  "workspaces": [
+    "packages/*"
+  ]
 }
