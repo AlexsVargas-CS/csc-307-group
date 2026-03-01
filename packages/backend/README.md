@@ -1,38 +1,13 @@
 # Showme Backend
-
-
 ## Using
 - Node.js 20+
 - npm
 - MongoDB 
 
-csc-307-group/
-├── .github/workflows/ci.yml    ← Backend CI (lint + test on push/PR)
-├── .gitignore
-├── .prettierrc.json
-├── CONTRIBUTING.md
-├── package.json                 ← Monorepo root (workspaces)
-│
-└── packages/
-    ├── backend/
-    │   ├── src/
-    │   │   ├── app.js / server.js
-    │   │   ├── config/       (db, env validation, passport)
-    │   │   ├── controllers/  (auth, tmdb)
-    │   │   ├── middleware/    (errorHandler, notFound, requireAuth)
-    │   │   ├── models/       (9 Mongoose models)
-    │   │   ├── routes/       (auth, tmdb)
-    │   │   ├── services/     (authService, tmdbClient)
-    │   │   ├── utils/        (apiError, asyncHandler)
-    │   │   └── scripts/      (seedGenres)
-    │   ├── tests/            (3 test files + setup)
-    │   ├── .env.example
-    │   ├── docker-compose.yml
-    │   └── package.json
-    │
-    └── frontend/
-        ├── src/
-        │   ├── App.jsx       (default Vite template)
-        │   └── main.jsx
-        ├── vite.config.js
-        └── index.html
+For now: 
+config/ : App-level setup database connection (db.js), environment variable validation with Zod (env.js), and Google OAuth
+controllers/ : takes incoming requests, calls services/models, and sends responses. auth.controller.js handles register/login/OAuth, tmdb.controller.js handles movie/TV search & details
+middleware/: requireAuth.js protects routes with JWT verification, errorHandler.js catches errors and sends formatted responses, notFound.js handles 404s
+models/: Mongoose schemas
+routes/: connects HTTP methods + paths to the right controller function. index.js combines all route files under /api
+services/:  handles password hashing and JWT token creation, tmdbClient.js makes API calls to TMDB for movie/TV data
