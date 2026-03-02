@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:3001/api/tmdb";
+const API_BASE = "/api/tmdb";
 
 export function posterURL(path, size = "w500") {
   if (!path) return null;
