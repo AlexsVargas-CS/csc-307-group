@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import FilmDetailPage from "./pages/FilmDetailPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
 
 const API_PREFIX = "http://localhost:3001";
 
@@ -13,6 +14,13 @@ function App() {
   const INVALID_TOKEN = "INVALID_TOKEN";
   const [token, setToken] = useState(INVALID_TOKEN);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
+      setToken(savedToken);
+    }
+  }, []);
 
   function addAuthHeader(otherHeaders = {}) {
     if (token === INVALID_TOKEN) {
@@ -63,7 +71,11 @@ function App() {
       if (response.status === 201) {
         response
           .json()
-          .then((payload) => {setToken(payload.token); navigate("/");});
+          .then((payload) => {
+            setToken(payload.token);
+            localStorage.setItem("token", payload.token);
+            navigate("/");
+          });
         setMessage(
           `Signup successful for user: ${creds.username}; auth token saved`
         );
@@ -92,6 +104,7 @@ function App() {
         />
         <Route path="/login" element={<LoginPage handleSubmit={loginUser} />} />
         <Route path="/signup" element={<LoginPage handleSubmit={signupUser} buttonLabel="Sign Up" modalLabel="Sign Up"/>} />
+        <Route path="/profile/:username" element={<ProfilePage />} />
       </Routes>
     </div>
   );

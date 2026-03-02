@@ -10,7 +10,9 @@ const userSchema = new mongoose.Schema({
   passwordHash: {
     type: String,
     required: true
-  }
+  },
+  bio: { type: String, default: "" },
+  favoriteGenres: { type: [String], default: [] }
 });
 
 export default mongoose.model("User", userSchema);
