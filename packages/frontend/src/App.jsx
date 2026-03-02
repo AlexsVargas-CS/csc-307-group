@@ -1,35 +1,91 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState, useEffect } from "react";
+import Table from "./Table";
+import Form from "./Form";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [characters, setCharacters] = useState([]);
+
+  function fetchUsers() {
+    const promise = fetch("http://localhost:8000/users");
+    return promise;
+  }
+  
+  useEffect(() => {
+    fetchUsers()
+      .then((res) => res.json())
+      .then((json) => setCharacters(json["users_list"]))
+      .catch((error) => {
+        console.log(error);
+      });
+  }, []);
+
+  function postUser(person) {
+    const promise = fetch("Http://localhost:8000/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(person),
+    });
+
+    return promise;
+  }
+
+  function updateList(person) {
+    postUser(person)
+      .then((res) => {
+        if (res.status != 201) {
+          throw new Error(res.statusText);
+        }
+        return res.json();
+      })
+      .then((newUser) => {
+        setCharacters([...characters, newUser]);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+
+  function deleteUser(index) {
+    const person = characters[index];
+    const promise = fetch("http://localhost:8000/users/" + person._id, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(person),
+    });
+
+    return promise;
+  }
+
+  function removeOneCharacter(index) {
+    deleteUser(index)
+      .then((res) => {
+        if (res.status != 204) {
+          throw new Error(res.statusText);
+        }
+        const updated = characters.filter((character, i) => {
+          return i !== index;
+        });
+        setCharacters(updated);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+  
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  <div className="container">
+    <Table
+      characterData={characters}
+      removeCharacter={removeOneCharacter}
+    />
+  <Form handleSubmit={updateList}/>
+  </div>
+  );
 }
 
-export default App
+export default App;
