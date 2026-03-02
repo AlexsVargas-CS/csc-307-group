@@ -8,20 +8,21 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import routes from './routes/index.js';
 
+import { registerUser, authenticateUser, loginUser } from "./auth.js";
+
 const app = express();
 
 app.use(helmet());
-app.use(
-  cors({
-    origin: env.CORS_ORIGIN,
-    credentials: false
-  })
-);
+app.use(cors());
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });
 });
+
+// Authentication
+app.post("/signup", registerUser);
+app.post("/login", loginUser);
 
 app.use('/api', routes);
 
