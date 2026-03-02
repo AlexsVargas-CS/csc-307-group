@@ -2,12 +2,7 @@ import { Router } from 'express';
 import passport from 'passport';
 
 import { env } from '../config/env.js';
-import {
-  currentUser,
-  googleAuthSuccess,
-  login,
-  register
-} from '../controllers/auth.controller.js';
+import { currentUser, googleAuthSuccess, login, register } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 
 const router = Router();

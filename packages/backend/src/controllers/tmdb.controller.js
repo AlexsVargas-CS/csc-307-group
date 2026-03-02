@@ -52,7 +52,9 @@ export const getTmdbDetails = asyncHandler(async (req, res) => {
     tmdbRequest(`/${type}/${tmdbId}/credits`)
   ]);
 
-  const genreDocs = await Genre.find({ tmdbId: { $in: details.genres?.map((genre) => genre.id) || [] } });
+  const genreDocs = await Genre.find({
+    tmdbId: { $in: details.genres?.map((genre) => genre.id) || [] }
+  });
   const director =
     credits.crew?.find((member) => member.job === 'Director')?.name ||
     credits.crew?.find((member) => member.job === 'Series Director')?.name ||

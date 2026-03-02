@@ -11,12 +11,18 @@ import { env } from '../config/env.js';
 
 const registerSchema = z.object({
   username: z.string().trim().min(3),
-  email: z.string().email().transform((value) => value.trim().toLowerCase()),
+  email: z
+    .string()
+    .email()
+    .transform((value) => value.trim().toLowerCase()),
   password: z.string().min(8)
 });
 
 const loginSchema = z.object({
-  email: z.string().email().transform((value) => value.trim().toLowerCase()),
+  email: z
+    .string()
+    .email()
+    .transform((value) => value.trim().toLowerCase()),
   password: z.string().min(1)
 });
 
