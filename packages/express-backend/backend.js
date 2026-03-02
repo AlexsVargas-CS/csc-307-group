@@ -3,6 +3,7 @@ import cors from "cors";
 import userService from "./services/user-service.js";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import { registerUser, authenticateUser, loginUser } from "./auth.js";
 
 dotenv.config();
 
@@ -16,10 +17,12 @@ mongoose
 const app = express();
 const port = 8000;
 
+const creds = [];
+
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
+app.get("/", authenticateUser, (req, res) => {
   res.send("Hello World!");
 });
 
@@ -60,17 +63,11 @@ app.get("/users/:id", (req, res) => {
     });
 });
 
-app.post("/users", (req, res) => {
+app.post("/users", authenticateUser, (req, res) => {
   const userToAdd = req.body;
-  
-  userService.addUser(userToAdd)
-    .then((newUser) => {
-      res.status(201).send(newUser);
-    })
-    .catch((error) => {
-      console.log(error);
-      res.status(500).send("Internal Server Error");
-    });
+  userService.addUser(userToAdd).then((result) =>
+    res.status(201).send(result)
+  );
 });
 
 app.delete("/users/:id", (req, res) => {
@@ -89,3 +86,9 @@ app.delete("/users/:id", (req, res) => {
       res.status(500).send("Internal Server Error");
     });
 });
+
+
+// Authentication
+app.post("/signup", registerUser);
+
+app.post("/login", loginUser);
