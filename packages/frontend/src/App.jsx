@@ -7,7 +7,9 @@ import FilmDetailPage from "./pages/FilmDetailPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 
-const API_PREFIX = "http://localhost:3001";
+const API_PREFIX =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8000";
 
 function App() {
   const navigate = useNavigate();
