@@ -39,6 +39,9 @@ Thumbs.db
 # Test coverage
 coverage
 
+# Claude Code
+.claude/
+
 # Misc
 *.local
 *.pem
