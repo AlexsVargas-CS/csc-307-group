@@ -8,7 +8,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import routes from './routes/index.js';
 
-import { registerUser, oginUser } from "./auth.js";
+import { registerUser, loginUser } from "./auth.js";
 
 const app = express();
 
