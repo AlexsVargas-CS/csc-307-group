@@ -5,7 +5,7 @@ dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().positive().default(3001),
+  PORT: z.coerce.number().int().positive().default(8000),
   MONGODB_URI: z.string().min(1),
   TMDB_API_KEY: z.string().default('test_tmdb_key'),
   JWT_SECRET: z.string().min(8).default('dev_jwt_secret_please_change'),

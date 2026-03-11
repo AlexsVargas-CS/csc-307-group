@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 
-const API_PREFIX = "http://localhost:3001";
+const API_PREFIX =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8000";
 
 function authHeaders() {
   const token = localStorage.getItem("token");
