@@ -4,6 +4,7 @@ import {
   discoverMovies,
   getGenres,
   getNowPlaying,
+  getSimilar,
   getTmdbDetails,
   getTrending,
   searchTmdb
@@ -16,6 +17,7 @@ router.get('/genres', getGenres);
 router.get('/now-playing', getNowPlaying);
 router.get('/discover', discoverMovies);
 router.get('/trending/:timeWindow', getTrending);
+router.get('/:type/:tmdbId/similar', getSimilar);
 router.get('/:type/:tmdbId', getTmdbDetails);
 
 export default router;

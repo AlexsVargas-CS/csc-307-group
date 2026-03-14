@@ -35,6 +35,19 @@ export async function getFilmDetails(
   return res.json();
 }
 
+export async function getSimilarFilms(
+  type,
+  tmdbId
+) {
+  const res = await fetch(
+    `${API_BASE}/${type}/${tmdbId}/similar`
+  );
+  if (!res.ok)
+    throw new Error("Failed to load similar films");
+  const data = await res.json();
+  return data.results;
+}
+
 let genreCache = null;
 
 export async function fetchGenres() {

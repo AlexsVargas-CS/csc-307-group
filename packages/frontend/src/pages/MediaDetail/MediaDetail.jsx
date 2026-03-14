@@ -1,27 +1,93 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import StarRating from "../../components/StarRating/StarRating.jsx";
+import {
+  getFilmDetails,
+  getSimilarFilms,
+  posterURL,
+} from "../../api/tmdb.js";
 import DimensionBar from "../../components/DimensionBar/DimensionBar.jsx";
 import ReviewCard from "../../components/ReviewCard/ReviewCard.jsx";
 import LogModal from "../../components/LogModal/LogModal.jsx";
 import {
-  mockFilm,
   mockAggregateRatings,
   mockReviews,
-  mockSimilarFilms,
   DIMENSION_LABELS,
 } from "../../data/mockMediaData.js";
+import { useDevTools } from "../../context/DevToolsContext.jsx";
 
 export default function MediaDetail() {
   const { mediaType, id } = useParams();
+  const [film, setFilm] = useState(null);
+  const [similar, setSimilar] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [watchlisted, setWatchlisted] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const { getMockData } = useDevTools();
 
-  // Use mock data (swap for API call later)
-  const film = mockFilm;
-  const ratings = mockAggregateRatings;
-  const reviews = mockReviews;
-  const similar = mockSimilarFilms;
+  // Use dev tools mock data if available, otherwise fall back to defaults
+  const mediaKey = `${mediaType}_${id}`;
+  const devMock = getMockData(mediaKey);
+  const ratings = devMock?.ratings || mockAggregateRatings;
+  const reviews = devMock?.reviews || mockReviews;
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      getFilmDetails(mediaType, id),
+      getSimilarFilms(mediaType, id),
+    ])
+      .then(([detailsRes, similarRes]) => {
+        if (cancelled) return;
+        const item = detailsRes.item;
+        setFilm({
+          title: item.title,
+          year: (item.releaseDate || "").slice(0, 4),
+          overview: item.description,
+          posterUrl: posterURL(item.posterPath),
+          genres: (item.genres || []).map(
+            (g) => g.name,
+          ),
+          director:
+            item.credits?.crew?.find(
+              (c) => c.job === "Director",
+            )?.name || null,
+        });
+        setSimilar(
+          similarRes.map((s) => ({
+            tmdbId: s.tmdbId,
+            title: s.title,
+            posterUrl: posterURL(s.posterPath),
+            mediaType: s.type,
+          })),
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mediaType, id]);
+
+  if (loading) {
+    return (
+      <p className="p-8 text-gray-400">Loading...</p>
+    );
+  }
+  if (error) {
+    return (
+      <p className="p-8 text-red-400">{error}</p>
+    );
+  }
+  if (!film) return null;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -65,16 +131,18 @@ export default function MediaDetail() {
           </p>
 
           {/* Genre tags */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {film.genres.map((genre) => (
-              <span
-                key={genre}
-                className="rounded-full border border-gray-600 bg-white/5 px-3 py-1 text-xs text-gray-300"
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
+          {film.genres.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {film.genres.map((genre) => (
+                <span
+                  key={genre}
+                  className="rounded-full border border-gray-600 bg-white/5 px-3 py-1 text-xs text-gray-300"
+                >
+                  {genre}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="mt-6 flex gap-3">
@@ -86,7 +154,9 @@ export default function MediaDetail() {
                   : "border border-gray-600 text-gray-300 hover:border-amber-400 hover:text-amber-400"
               }`}
             >
-              {watchlisted ? "✓ Watchlisted" : "+ Watchlist"}
+              {watchlisted
+                ? "✓ Watchlisted"
+                : "+ Watchlist"}
             </button>
             <button
               onClick={() => setLogOpen(true)}
@@ -102,14 +172,16 @@ export default function MediaDetail() {
           <h2 className="mb-4 text-lg font-semibold text-white">
             Community Ratings
           </h2>
-          {Object.entries(ratings).map(([key, data]) => (
-            <DimensionBar
-              key={key}
-              label={DIMENSION_LABELS[key]}
-              average={data.average}
-              count={data.count}
-            />
-          ))}
+          {Object.entries(ratings).map(
+            ([key, data]) => (
+              <DimensionBar
+                key={key}
+                label={DIMENSION_LABELS[key]}
+                average={data.average}
+                count={data.count}
+              />
+            ),
+          )}
         </div>
       </div>
 
@@ -122,46 +194,51 @@ export default function MediaDetail() {
 
         <div className="space-y-4">
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+            <ReviewCard
+              key={review.id}
+              review={review}
+            />
           ))}
         </div>
       </section>
 
       {/* ── ZONE 4 — Similar Films ── */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-bold text-white">
-          Similar Films
-        </h2>
-        <hr className="mt-2 mb-6 border-gray-800" />
+      {similar.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-2xl font-bold text-white">
+            Similar Films
+          </h2>
+          <hr className="mt-2 mb-6 border-gray-800" />
 
-        <div
-          className="flex gap-4 overflow-x-auto pb-2"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {similar.map((s) => (
-            <Link
-              key={s.id}
-              to={`/media/${s.mediaType}/${s.tmdbId}`}
-              className="group shrink-0"
-            >
-              {s.posterUrl ? (
-                <img
-                  src={s.posterUrl}
-                  alt={s.title}
-                  className="h-52 w-36 rounded-lg object-cover shadow-md transition-transform group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex h-52 w-36 items-center justify-center rounded-lg bg-gray-800 text-center text-xs text-gray-500">
+          <div
+            className="flex gap-4 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {similar.map((s) => (
+              <Link
+                key={s.tmdbId}
+                to={`/media/${s.mediaType}/${s.tmdbId}`}
+                className="group shrink-0"
+              >
+                {s.posterUrl ? (
+                  <img
+                    src={s.posterUrl}
+                    alt={s.title}
+                    className="h-52 w-36 rounded-lg object-cover shadow-md transition-transform group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-52 w-36 items-center justify-center rounded-lg bg-gray-800 text-center text-xs text-gray-500">
+                    {s.title}
+                  </div>
+                )}
+                <p className="mt-2 w-36 truncate text-sm text-gray-300 group-hover:text-white">
                   {s.title}
-                </div>
-              )}
-              <p className="mt-2 w-36 truncate text-sm text-gray-300 group-hover:text-white">
-                {s.title}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── ZONE 5 — Log Modal ── */}
       <LogModal

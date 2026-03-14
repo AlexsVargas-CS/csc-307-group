@@ -133,6 +133,25 @@ export const getGenres = asyncHandler(
   }
 );
 
+export const getSimilar = asyncHandler(async (req, res) => {
+  const { type, tmdbId } = detailsSchema.parse(req.params);
+
+  const data = await tmdbRequest(
+    `/${type}/${tmdbId}/similar`,
+    { page: 1 }
+  );
+
+  const results = (data.results || []).slice(0, 8).map((item) => ({
+    tmdbId: item.id,
+    type,
+    title: getTitle(type, item),
+    posterPath: item.poster_path || null,
+    releaseDate: getReleaseDate(type, item)
+  }));
+
+  res.status(200).json({ results });
+});
+
 export const getTmdbDetails = asyncHandler(async (req, res) => {
   const { type, tmdbId } = detailsSchema.parse(req.params);
 
