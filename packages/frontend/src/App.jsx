@@ -6,10 +6,11 @@ import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import FilmDetailPage from "./pages/FilmDetailPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
+import MediaDetail from "./pages/MediaDetail/MediaDetail.jsx";
 
 const API_PREFIX =
   import.meta.env.VITE_API_URL ||
-  "http://localhost:8000";
+  "http://localhost:3001";
 
 function App() {
   const navigate = useNavigate();
@@ -107,6 +108,10 @@ function App() {
         <Route path="/login" element={<LoginPage handleSubmit={loginUser} />} />
         <Route path="/signup" element={<LoginPage handleSubmit={signupUser} buttonLabel="Sign Up" modalLabel="Sign Up"/>} />
         <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route
+          path="/media/:mediaType/:id"
+          element={<MediaDetail />}
+        />
       </Routes>
     </div>
   );

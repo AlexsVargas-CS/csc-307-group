@@ -1,0 +1,175 @@
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import StarRating from "../../components/StarRating/StarRating.jsx";
+import DimensionBar from "../../components/DimensionBar/DimensionBar.jsx";
+import ReviewCard from "../../components/ReviewCard/ReviewCard.jsx";
+import LogModal from "../../components/LogModal/LogModal.jsx";
+import {
+  mockFilm,
+  mockAggregateRatings,
+  mockReviews,
+  mockSimilarFilms,
+  DIMENSION_LABELS,
+} from "../../data/mockMediaData.js";
+
+export default function MediaDetail() {
+  const { mediaType, id } = useParams();
+  const [watchlisted, setWatchlisted] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
+
+  // Use mock data (swap for API call later)
+  const film = mockFilm;
+  const ratings = mockAggregateRatings;
+  const reviews = mockReviews;
+  const similar = mockSimilarFilms;
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-8">
+      {/* ── ZONE 1 + ZONE 2 — Hero + Dimensional Ratings ── */}
+      <div className="flex flex-col gap-8 lg:flex-row">
+        {/* Poster */}
+        <div className="shrink-0">
+          {film.posterUrl ? (
+            <img
+              src={film.posterUrl}
+              alt={film.title}
+              className="w-64 rounded-lg shadow-lg shadow-black/40 sm:w-72"
+            />
+          ) : (
+            <div className="flex h-[400px] w-64 items-center justify-center rounded-lg bg-gray-800 text-gray-500 sm:w-72">
+              No poster
+            </div>
+          )}
+        </div>
+
+        {/* Metadata + Actions */}
+        <div className="flex-1">
+          <h1 className="text-4xl font-bold tracking-tight text-white">
+            {film.title}
+          </h1>
+          <p className="mt-1 text-lg text-gray-400">
+            {film.year}
+          </p>
+
+          {film.director && (
+            <p className="mt-2 text-sm text-gray-400">
+              Directed by{" "}
+              <span className="text-white">
+                {film.director}
+              </span>
+            </p>
+          )}
+
+          <p className="mt-4 max-w-xl leading-relaxed text-gray-300">
+            {film.overview}
+          </p>
+
+          {/* Genre tags */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {film.genres.map((genre) => (
+              <span
+                key={genre}
+                className="rounded-full border border-gray-600 bg-white/5 px-3 py-1 text-xs text-gray-300"
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
+
+          {/* Action buttons */}
+          <div className="mt-6 flex gap-3">
+            <button
+              onClick={() => setWatchlisted((w) => !w)}
+              className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
+                watchlisted
+                  ? "bg-amber-400 text-black"
+                  : "border border-gray-600 text-gray-300 hover:border-amber-400 hover:text-amber-400"
+              }`}
+            >
+              {watchlisted ? "✓ Watchlisted" : "+ Watchlist"}
+            </button>
+            <button
+              onClick={() => setLogOpen(true)}
+              className="rounded-lg bg-amber-400 px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-amber-500"
+            >
+              Log
+            </button>
+          </div>
+        </div>
+
+        {/* Dimensional Ratings (sidebar on desktop) */}
+        <div className="w-full shrink-0 lg:w-64">
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            Community Ratings
+          </h2>
+          {Object.entries(ratings).map(([key, data]) => (
+            <DimensionBar
+              key={key}
+              label={DIMENSION_LABELS[key]}
+              average={data.average}
+              count={data.count}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── ZONE 3 — Reviews ── */}
+      <section className="mt-12">
+        <h2 className="text-2xl font-bold text-white">
+          Reviews
+        </h2>
+        <hr className="mt-2 mb-6 border-gray-800" />
+
+        <div className="space-y-4">
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      </section>
+
+      {/* ── ZONE 4 — Similar Films ── */}
+      <section className="mt-12">
+        <h2 className="text-2xl font-bold text-white">
+          Similar Films
+        </h2>
+        <hr className="mt-2 mb-6 border-gray-800" />
+
+        <div
+          className="flex gap-4 overflow-x-auto pb-2"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {similar.map((s) => (
+            <Link
+              key={s.id}
+              to={`/media/${s.mediaType}/${s.tmdbId}`}
+              className="group shrink-0"
+            >
+              {s.posterUrl ? (
+                <img
+                  src={s.posterUrl}
+                  alt={s.title}
+                  className="h-52 w-36 rounded-lg object-cover shadow-md transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-52 w-36 items-center justify-center rounded-lg bg-gray-800 text-center text-xs text-gray-500">
+                  {s.title}
+                </div>
+              )}
+              <p className="mt-2 w-36 truncate text-sm text-gray-300 group-hover:text-white">
+                {s.title}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── ZONE 5 — Log Modal ── */}
+      <LogModal
+        isOpen={logOpen}
+        onClose={() => setLogOpen(false)}
+        mediaId={id}
+        mediaType={mediaType}
+      />
+    </main>
+  );
+}
