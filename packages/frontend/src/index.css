@@ -3,3 +3,12 @@
 @theme {
   --font-sans: "DM Sans", sans-serif;
 }
+
+/* Hide scrollbar on horizontal film rows */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

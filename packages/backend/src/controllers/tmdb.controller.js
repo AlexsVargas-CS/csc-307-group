@@ -44,6 +44,95 @@ export const searchTmdb = asyncHandler(async (req, res) => {
   });
 });
 
+export const getTrending = asyncHandler(
+  async (req, res) => {
+    const timeWindow = req.params.timeWindow === "day"
+      ? "day"
+      : "week";
+
+    const data = await tmdbRequest(
+      `/trending/all/${timeWindow}`,
+      { page: req.query.page || 1 }
+    );
+
+    const results = (data.results || []).map(
+      (item) => ({
+        tmdbId: item.id,
+        type: item.media_type === "tv" ? "tv" : "movie",
+        title: item.title || item.name,
+        posterPath: item.poster_path || null,
+        genreIds: item.genre_ids || [],
+        releaseDate:
+          item.release_date ||
+          item.first_air_date ||
+          null
+      })
+    );
+
+    res.status(200).json({ results });
+  }
+);
+
+export const getNowPlaying = asyncHandler(
+  async (req, res) => {
+    const data = await tmdbRequest("/movie/now_playing", {
+      page: req.query.page || 1
+    });
+
+    const results = (data.results || []).map(
+      (item) => ({
+        tmdbId: item.id,
+        type: "movie",
+        title: item.title,
+        posterPath: item.poster_path || null,
+        genreIds: item.genre_ids || [],
+        releaseDate: item.release_date || null
+      })
+    );
+
+    res.status(200).json({ results });
+  }
+);
+
+export const discoverMovies = asyncHandler(
+  async (req, res) => {
+    const params = { page: req.query.page || 1 };
+    if (req.query.with_genres) {
+      params.with_genres = req.query.with_genres;
+    }
+
+    const data = await tmdbRequest(
+      "/discover/movie",
+      params
+    );
+
+    const results = (data.results || []).map(
+      (item) => ({
+        tmdbId: item.id,
+        type: "movie",
+        title: item.title,
+        posterPath: item.poster_path || null,
+        genreIds: item.genre_ids || [],
+        releaseDate: item.release_date || null
+      })
+    );
+
+    res.status(200).json({ results });
+  }
+);
+
+export const getGenres = asyncHandler(
+  async (_req, res) => {
+    const data = await tmdbRequest(
+      "/genre/movie/list"
+    );
+
+    res
+      .status(200)
+      .json({ genres: data.genres || [] });
+  }
+);
+
 export const getTmdbDetails = asyncHandler(async (req, res) => {
   const { type, tmdbId } = detailsSchema.parse(req.params);
 
