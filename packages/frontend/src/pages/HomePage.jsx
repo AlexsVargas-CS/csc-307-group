@@ -1,170 +1,147 @@
-import {
-  useState,
-  useEffect,
-  useCallback
-} from "react";
-import HeroSection from "../components/HeroSection/HeroSection.jsx";
+import { useRef } from "react";
+import useHomePageData from "../hooks/useHomePageData.js";
+import FeaturedHero from "../components/home/FeaturedHero.jsx";
+import HomeSectionHeader from "../components/home/HomeSectionHeader.jsx";
+import CategorySpotlightGrid from "../components/home/CategorySpotlightGrid.jsx";
+import MostDiscussedList from "../components/home/MostDiscussedList.jsx";
+import PulseCard from "../components/home/PulseCard.jsx";
+import CuratedListTile from "../components/home/CuratedListTile.jsx";
 import FilmRow from "../components/FilmRow/FilmRow.jsx";
 import {
-  fetchTrending,
-  fetchNewReleases,
-  fetchByGenre,
-  fetchGenres
-} from "../api/tmdb.js";
-import { useAuth } from "../context/AuthContext.jsx";
-
-const FEATURED_GENRES = [
-  { id: 28, name: "Action" },
-  { id: 18, name: "Drama" },
-  { id: 35, name: "Comedy" },
-  { id: 878, name: "Sci-Fi" },
-  { id: 27, name: "Horror" }
-];
+  HeroSkeleton,
+  RowSkeleton,
+} from "../components/home/HomeSkeletons.jsx";
 
 export default function HomePage() {
-  const { isAuthenticated, user, token } =
-    useAuth();
+  const categoriesRef = useRef(null);
+  const data = useHomePageData();
 
-  const [genreMap, setGenreMap] = useState(null);
+  const scrollToCategories = () => {
+    categoriesRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  };
 
-  const [trending, setTrending] = useState([]);
-  const [trendingLoading, setTrendingLoading] =
-    useState(true);
-  const [trendingError, setTrendingError] =
-    useState(false);
+  if (data.loading) {
+    return (
+      <main>
+        <HeroSkeleton />
+        <div className="mx-auto max-w-7xl space-y-12 px-8 py-10">
+          <section>
+            <div className="mb-6 h-7 w-48 rounded bg-gray-800" />
+            <RowSkeleton />
+          </section>
+          <section>
+            <div className="mb-6 h-7 w-56 rounded bg-gray-800" />
+            <RowSkeleton count={4} />
+          </section>
+        </div>
+      </main>
+    );
+  }
 
-  const [newReleases, setNewReleases] = useState(
-    []
-  );
-  const [newReleasesLoading, setNewReleasesLoading] =
-    useState(true);
-  const [newReleasesError, setNewReleasesError] =
-    useState(false);
-
-  const [genreFilms, setGenreFilms] = useState(
-    []
-  );
-  const [genreLoading, setGenreLoading] =
-    useState(true);
-  const [genreError, setGenreError] =
-    useState(false);
-  const [genreTitle, setGenreTitle] = useState(
-    "Popular Films"
-  );
-
-  const loadGenreSection = useCallback(async () => {
-    setGenreLoading(true);
-    setGenreError(false);
-    try {
-      let genreId;
-      let genreName;
-
-      if (isAuthenticated && token) {
-        const API_PREFIX =
-          import.meta.env.VITE_API_URL ||
-          "http://localhost:3001";
-        const res = await fetch(
-          `${API_PREFIX}/api/users/${user.username}`
-        );
-        if (res.ok) {
-          const profile = await res.json();
-          if (
-            profile.favoriteGenres?.length > 0
-          ) {
-            setGenreTitle("For You");
-            const genreIds = profile.favoriteGenres
-              .map((name) => {
-                const entry =
-                  FEATURED_GENRES.find(
-                    (g) =>
-                      g.name.toLowerCase() ===
-                      name.toLowerCase()
-                  );
-                return entry?.id;
-              })
-              .filter(Boolean);
-
-            if (genreIds.length > 0) {
-              const films = await fetchByGenre(
-                genreIds.join(",")
-              );
-              setGenreFilms(films);
-              setGenreLoading(false);
-              return;
-            }
-          }
-        }
-      }
-
-      const pick =
-        FEATURED_GENRES[
-          Math.floor(
-            Math.random() * FEATURED_GENRES.length
-          )
-        ];
-      genreId = pick.id;
-      genreName = pick.name;
-      setGenreTitle(`Popular in ${genreName}`);
-
-      const films = await fetchByGenre(genreId);
-      setGenreFilms(films);
-    } catch {
-      setGenreError(true);
-    } finally {
-      setGenreLoading(false);
-    }
-  }, [isAuthenticated, token, user]);
-
-  useEffect(() => {
-    fetchGenres()
-      .then(setGenreMap)
-      .catch(() => {});
-
-    fetchTrending()
-      .then(setTrending)
-      .catch(() => setTrendingError(true))
-      .finally(() => setTrendingLoading(false));
-
-    fetchNewReleases()
-      .then(setNewReleases)
-      .catch(() => setNewReleasesError(true))
-      .finally(() =>
-        setNewReleasesLoading(false)
-      );
-
-    loadGenreSection();
-  }, [loadGenreSection]);
+  const hasUpcoming =
+    data.upcoming && data.upcoming.length > 0;
+  const hasPulseCards =
+    data.pulseCards && data.pulseCards.length > 0;
+  const hasCuratedLists =
+    data.curatedLists &&
+    data.curatedLists.length > 0;
 
   return (
-    <main className="mx-auto max-w-7xl pb-12">
-      <HeroSection />
-
-      <FilmRow
-        title="Trending This Week"
-        seeAllHref="#"
-        films={trending}
-        loading={trendingLoading}
-        error={trendingError}
-        genreMap={genreMap}
+    <main>
+      {/* 1. Featured Hero */}
+      <FeaturedHero
+        film={data.hero}
+        genreMap={data.genreMap}
+        onScrollToCategories={scrollToCategories}
       />
 
-      <FilmRow
-        title="New Releases"
-        seeAllHref="#"
-        films={newReleases}
-        loading={newReleasesLoading}
-        error={newReleasesError}
-        genreMap={genreMap}
-      />
+      <div className="mx-auto max-w-7xl space-y-14 pb-16">
+        {/* 2. Trending This Week */}
+        <FilmRow
+          title="Trending This Week"
+          films={data.trending}
+          loading={false}
+          error={data.trending.length === 0}
+          genreMap={data.genreMap}
+        />
 
-      <FilmRow
-        title={genreTitle}
-        seeAllHref="#"
-        films={genreFilms}
-        loading={genreLoading}
-        error={genreError}
-        genreMap={genreMap}
-      />
+        {/* 3. Top Rated by Category */}
+        <div ref={categoriesRef}>
+          <CategorySpotlightGrid
+            spotlights={data.categorySpotlights}
+            loading={false}
+          />
+        </div>
+
+        {/* 4. Upcoming Releases */}
+        {hasUpcoming && (
+          <FilmRow
+            title="Upcoming Releases"
+            films={data.upcoming}
+            loading={false}
+            error={false}
+            genreMap={data.genreMap}
+          />
+        )}
+
+        {/* 5 & 6. Most Discussed + Community Pulse */}
+        <section className="px-8">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-5">
+            {/* Community Pulse — wider */}
+            {hasPulseCards && (
+              <div className="lg:col-span-3">
+                <HomeSectionHeader
+                  title="Why They're Trending"
+                  subtitle="What's in the conversation this week"
+                />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {data.pulseCards.map((film) => (
+                    <PulseCard
+                      key={film.tmdbId}
+                      film={film}
+                      genreMap={data.genreMap}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Most Discussed — compact sidebar */}
+            <div
+              className={
+                hasPulseCards
+                  ? "lg:col-span-2"
+                  : ""
+              }
+            >
+              <MostDiscussedList
+                films={data.mostDiscussed}
+                loading={false}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* 7. Curated Lists */}
+        {hasCuratedLists && (
+          <section className="px-8">
+            <HomeSectionHeader
+              title="Curated Lists"
+              subtitle="Editorially grouped from what's trending"
+            />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {data.curatedLists.map((list) => (
+                <CuratedListTile
+                  key={list.title}
+                  list={list}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
     </main>
   );
 }

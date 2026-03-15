@@ -97,3 +97,14 @@ export async function fetchByGenre(genreId) {
   const data = await res.json();
   return data.results;
 }
+
+export async function fetchDiscover(params = {}) {
+  const qs = new URLSearchParams(params);
+  const res = await fetch(
+    `${API_BASE}/discover?${qs}`
+  );
+  if (!res.ok)
+    throw new Error("Failed to load discover");
+  const data = await res.json();
+  return data.results;
+}

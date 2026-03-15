@@ -61,6 +61,11 @@ export const getTrending = asyncHandler(
         type: item.media_type === "tv" ? "tv" : "movie",
         title: item.title || item.name,
         posterPath: item.poster_path || null,
+        backdropPath: item.backdrop_path || null,
+        overview: item.overview || "",
+        voteAverage: item.vote_average ?? null,
+        voteCount: item.vote_count ?? 0,
+        popularity: item.popularity ?? 0,
         genreIds: item.genre_ids || [],
         releaseDate:
           item.release_date ||
@@ -85,6 +90,11 @@ export const getNowPlaying = asyncHandler(
         type: "movie",
         title: item.title,
         posterPath: item.poster_path || null,
+        backdropPath: item.backdrop_path || null,
+        overview: item.overview || "",
+        voteAverage: item.vote_average ?? null,
+        voteCount: item.vote_count ?? 0,
+        popularity: item.popularity ?? 0,
         genreIds: item.genre_ids || [],
         releaseDate: item.release_date || null
       })
@@ -97,8 +107,19 @@ export const getNowPlaying = asyncHandler(
 export const discoverMovies = asyncHandler(
   async (req, res) => {
     const params = { page: req.query.page || 1 };
-    if (req.query.with_genres) {
-      params.with_genres = req.query.with_genres;
+
+    const allowedParams = [
+      "with_genres",
+      "sort_by",
+      "primary_release_date.gte",
+      "primary_release_date.lte",
+      "vote_average.gte",
+      "vote_count.gte",
+    ];
+    for (const key of allowedParams) {
+      if (req.query[key]) {
+        params[key] = req.query[key];
+      }
     }
 
     const data = await tmdbRequest(
@@ -112,6 +133,11 @@ export const discoverMovies = asyncHandler(
         type: "movie",
         title: item.title,
         posterPath: item.poster_path || null,
+        backdropPath: item.backdrop_path || null,
+        overview: item.overview || "",
+        voteAverage: item.vote_average ?? null,
+        voteCount: item.vote_count ?? 0,
+        popularity: item.popularity ?? 0,
         genreIds: item.genre_ids || [],
         releaseDate: item.release_date || null
       })
