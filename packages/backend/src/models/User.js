@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   bio: { type: String, default: "" },
-  favoriteGenres: { type: [String], default: [] }
+  favoriteGenres: { type: [String], default: [] },
+  profilePictureUrl: { type: String, default: "" }
 });
 
 export default mongoose.model("User", userSchema);
