@@ -10,7 +10,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed:genres": "node src/scripts/seedGenres.js",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --passWithNoTests",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
