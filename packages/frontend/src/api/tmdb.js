@@ -1,19 +1,19 @@
-const API_BASE = "/api/tmdb";
+const API_BASE = `${import.meta.env.VITE_API_URL || ""}/api/tmdb`;
 
 export function posterURL(path, size = "w500") {
-  if (!path) return null;
-  return `https://image.tmdb.org/t/p/${size}${path}`;
+    if (!path) return null;
+    return `https://image.tmdb.org/t/p/${size}${path}`;
 }
 
 export async function searchFilms(query, type = "movie") {
-  const params = new URLSearchParams({ query, type });
-  const res = await fetch(`${API_BASE}/search?${params}`);
-  if (!res.ok) throw new Error("Search failed");
-  return res.json();
+    const params = new URLSearchParams({ query, type });
+    const res = await fetch(`${API_BASE}/search?${params}`);
+    if (!res.ok) throw new Error("Search failed");
+    return res.json();
 }
 
 export async function getFilmDetails(type, tmdbId) {
-  const res = await fetch(`${API_BASE}/${type}/${tmdbId}`);
-  if (!res.ok) throw new Error("Failed to load details");
-  return res.json();
+    const res = await fetch(`${API_BASE}/${type}/${tmdbId}`);
+    if (!res.ok) throw new Error("Failed to load details");
+    return res.json();
 }
