@@ -45,8 +45,12 @@ function App() {
     })
       .then((response) => {
         if (response.status === 200) {
-          response
-            .json().then((payload) => {setToken(payload.token); navigate("/");});
+          response.json().then((payload) => {
+            setToken(payload.token);
+            localStorage.setItem("token", payload.token);
+            navigate("/");
+            window.location.reload();
+          });
           setMessage(`Login successful; auth token saved`);
         } else {
           setMessage(
