@@ -36,7 +36,7 @@ export default function MostDiscussedList({
           return (
             <Link
               key={film.tmdbId}
-              to={`/film/${film.type || "movie"}/${film.tmdbId}`}
+              to={`/media/${film.type || "movie"}/${film.tmdbId}`}
               className="flex items-center gap-3 rounded-lg border border-gray-800/50 bg-gray-900/40 p-2 transition hover:border-gray-700 hover:bg-gray-800/40"
             >
               <span className="w-5 text-center text-sm font-bold text-gray-500">

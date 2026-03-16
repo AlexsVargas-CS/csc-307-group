@@ -19,7 +19,7 @@ export default function FilmCard({
 
   return (
     <Link
-      to={`/film/${film.type || "movie"}/${film.tmdbId}`}
+      to={`/media/${film.type || "movie"}/${film.tmdbId}`}
       className="group block overflow-hidden rounded-lg bg-gray-800 shadow transition hover:shadow-xl hover:ring-1 hover:ring-amber-400/50"
     >
       {img ? (

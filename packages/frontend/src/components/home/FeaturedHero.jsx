@@ -101,7 +101,7 @@ export default function FeaturedHero({
           {/* CTAs */}
           <div className="flex gap-3">
             <Link
-              to={`/film/${film.type || "movie"}/${film.tmdbId}`}
+              to={`/media/${film.type || "movie"}/${film.tmdbId}`}
               className="rounded-lg bg-amber-500 px-6 py-2.5 font-semibold text-gray-950 transition hover:bg-amber-400"
             >
               Explore Movie
