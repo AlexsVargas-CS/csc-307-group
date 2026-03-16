@@ -89,29 +89,40 @@ export default function Navbar() {
           />
         </form>
 
-        <button
-          onClick={handleProfileClick}
-          className="flex items-center justify-center transition"
-          title={username ? "Your profile" : "Login"}
-        >
-          {username ? (
-            profilePictureUrl ? (
-              <img
-                src={`${API_PREFIX}${profilePictureUrl}`}
-                alt="Profile"
-                className="h-9 w-9 rounded-full border border-gray-700 object-cover transition hover:border-amber-400"
-              />
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-800 text-sm font-bold text-gray-300 hover:bg-gray-700">
-                {username[0].toUpperCase()}
-              </div>
-            )
-          ) : (
-            <span className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-gray-900 hover:bg-amber-400">
-              Login
-            </span>
+        <div className="flex items-center gap-4">
+          {username && (
+            <button
+              onClick={() => navigate(`/profile/${username}/logs`)}
+              className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-gray-900 hover:bg-amber-400 transition"
+            >
+              Logs
+            </button>
           )}
-        </button>
+
+          <button
+            onClick={handleProfileClick}
+            className="flex items-center justify-center transition"
+            title={username ? "Your profile" : "Login"}
+          >
+            {username ? (
+              profilePictureUrl ? (
+                <img
+                  src={`${API_PREFIX}${profilePictureUrl}`}
+                  alt="Profile"
+                  className="h-9 w-9 rounded-full border border-gray-700 object-cover transition hover:border-amber-400"
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-800 text-sm font-bold text-gray-300 hover:bg-gray-700">
+                  {username[0].toUpperCase()}
+                </div>
+              )
+            ) : (
+              <span className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-gray-900 hover:bg-amber-400">
+                Login
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </nav>
   );

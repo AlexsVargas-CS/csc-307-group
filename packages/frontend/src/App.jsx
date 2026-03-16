@@ -10,6 +10,7 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 import MediaDetail from "./pages/MediaDetail/MediaDetail.jsx";
 import DevTools from "./components/DevTools/DevTools.jsx";
 import Watchlist from "./pages/Watchlist.jsx";
+import LogPage from "./pages/LogPage.jsx";
 
 function App() {
   return (
@@ -50,6 +51,10 @@ function App() {
           <Route
             path="/profile/:username/watchlist"
             element={<Watchlist />}
+          />
+          <Route
+            path="/profile/:username/logs"
+            element={<LogPage />}
           />
           <Route
             path="/media/:mediaType/:id"
