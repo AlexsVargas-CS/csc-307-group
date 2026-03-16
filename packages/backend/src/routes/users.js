@@ -56,8 +56,7 @@ router.get("/users/:username", async (req, res) => {
     username: user.username,
     profilePictureUrl: user.profilePictureUrl || "",
     bio: user.bio || "This is a placeholder bio.",
-    favorites: user.favorites || [],
-    // TODO: replace this later with computed most-watched genres from watch history
+    favoriteMovies: user.favoriteMovies || [],
     mostWatchedGenres: [],
   });
 });
@@ -69,24 +68,30 @@ router.put("/users/:username", authenticateUser, async (req, res) => {
     return res.status(403).send("Forbidden: cannot edit another user's profile");
   }
 
-  const { bio, favorites } = req.body;
+  const { bio, favoriteMovies } = req.body;
 
   const updated = await User.findOneAndUpdate(
     { username },
     {
       ...(typeof bio === "string" ? { bio } : {}),
-      ...(Array.isArray(favorites) ? { favorites } : {}),
+      ...(Array.isArray(favoriteMovies)
+        ? {
+            favoriteMovies: favoriteMovies
+              .map((id) => Number(id))
+              .filter((id) => Number.isInteger(id) && id > 0)
+              .slice(0, 5),
+          }
+        : {}),
     },
     { new: true }
   ).lean();
-
   if (!updated) return res.status(404).send("User not found");
 
   return res.status(200).json({
     username: updated.username,
     profilePictureUrl: updated.profilePictureUrl || "",
     bio: updated.bio || "",
-    favorites: updated.favorites || [],
+    favoriteMovies: updated.favoriteMovies || [],
     mostWatchedGenres: [],
   });
 });

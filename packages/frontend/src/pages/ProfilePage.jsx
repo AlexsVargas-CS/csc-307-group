@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import FavoriteMoviesModal from "../components/FavoriteMoviesModal.jsx";
 
 const API_PREFIX =
   import.meta.env.VITE_API_URL ||
@@ -27,15 +28,20 @@ export default function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [bioDraft, setBioDraft] = useState("");
-  const [genresDraft, setGenresDraft] = useState("");
 
-  // PFP state
+  // pfp
   const [selectedPfpFile, setSelectedPfpFile] = useState(null);
   const [pfpPreviewUrl, setPfpPreviewUrl] = useState("");
   const [uploadingPfp, setUploadingPfp] = useState(false);
 
+  // favorites
+  const [favoriteMovieDetails, setFavoriteMovieDetails] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesModalOpen, setFavoritesModalOpen] = useState(false);
+  const [activeFavoriteSlot, setActiveFavoriteSlot] = useState(null);
+
   const isOwner = useMemo(() => {
-    return me?.username && me.username === username;
+    return me?.username === username;
   }, [me, username]);
 
   function handleLogout() {
@@ -129,6 +135,59 @@ export default function ProfilePage() {
     }
   }
 
+    useEffect(() => {
+    let cancelled = false;
+
+    async function loadFavoriteMovies() {
+      const ids = (profile?.favoriteMovies || [])
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0);
+
+      if (!ids.length) {
+        setFavoriteMovieDetails([]);
+        return;
+      }
+
+      setFavoritesLoading(true);
+
+      try {
+        const movies = await Promise.all(
+          ids.map(async (tmdbId) => {
+            const res = await fetch(`${API_PREFIX}/api/tmdb/movie/${tmdbId}`);
+
+            if (!res.ok) {
+              const txt = await res.text();
+              throw new Error(`Favorite movie load failed ${res.status}: ${txt}`);
+            }
+
+            const data = await res.json();
+            return data.item;
+          })
+        );
+
+        if (!cancelled) {
+          setFavoriteMovieDetails(movies);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setMessage(err.message);
+          setFavoriteMovieDetails([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setFavoritesLoading(false);
+        }
+      }
+    }
+
+    loadFavoriteMovies();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.favoriteMovies]);
+
+
   function handlePfpFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -221,6 +280,52 @@ export default function ProfilePage() {
         </Link>
       </main>
     );
+  }
+
+  async function saveFavoriteMovies(selectedMovies) {
+    if (activeFavoriteSlot === null) return;
+
+    const nextFavorites = [...favoriteMovieDetails];
+    const chosenMovie = selectedMovies[0];
+
+    if (!chosenMovie) return;
+
+    nextFavorites[activeFavoriteSlot] = chosenMovie;
+
+    const favoriteMoviesPayload = nextFavorites
+      .filter(Boolean)
+      .map((movie) => Number(movie.tmdbId))
+      .filter((id) => Number.isFinite(id));
+
+    const res = await fetch(`${API_PREFIX}/api/users/${username}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify({ favoriteMovies: favoriteMoviesPayload }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Save favorites failed ${res.status}: ${txt}`);
+    }
+
+    const updated = await res.json();
+
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            favoriteMovies: updated.favoriteMovies || [],
+          }
+        : prev
+    );
+
+    setFavoriteMovieDetails(nextFavorites);
+    setFavoritesModalOpen(false);
+    setActiveFavoriteSlot(null);
+    setMessage("Favorites updated.");
   }
 
   if (!profile) return null;
@@ -337,33 +442,66 @@ export default function ProfilePage() {
             )}
           </section>
 
-          {/*<section>
-            <h2 className="text-lg font-semibold text-white">Favorite genres</h2>
+          <section>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Top 5 Favorites</h2>
+            </div>
 
-            {!isEditing ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(profile.favoriteGenres || []).length > 0 ? (
-                  profile.favoriteGenres.map((g) => (
-                    <span
-                      key={g}
-                      className="rounded-full bg-gray-800 px-3 py-1 text-xs text-gray-300"
-                    >
-                      {g}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-gray-500 text-sm">None listed.</span>
-                )}
+            {favoritesLoading ? (
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="aspect-[2/3] animate-pulse rounded-xl bg-gray-800"
+                  />
+                ))}
               </div>
             ) : (
-              <input
-                value={genresDraft}
-                onChange={(e) => setGenresDraft(e.target.value)}
-                className="mt-2 w-full rounded-lg bg-gray-800 px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                placeholder="e.g. Drama, Sci-Fi, Comedy"
-              />
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                {Array.from({ length: 5 }).map((_, index) => {
+                  const movie = favoriteMovieDetails[index];
+
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      disabled={!isOwner}
+                      onClick={() => {
+                        if (!isOwner) return;
+                        setActiveFavoriteSlot(index);
+                        setFavoritesModalOpen(true);
+                      }}
+                      className={`group relative overflow-hidden rounded-xl text-left ${
+                        isOwner ? "cursor-pointer" : "cursor-default"
+                      }`}
+                    >
+
+                      {movie?.posterPath ? (
+                        <>
+                          <img
+                            src={`https://image.tmdb.org/t/p/w342${movie.posterPath}`}
+                            alt={movie.title}
+                            className="aspect-[2/3] w-full rounded-xl object-cover"
+                          />
+                          {isOwner && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                              <span className="rounded-lg bg-black/70 px-3 py-2 text-sm font-semibold text-white">
+                                Change movie
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl border border-dashed border-gray-700 bg-gray-800/60 text-sm text-gray-500">
+                          {isOwner ? "Add favorite" : "Empty"}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             )}
-          </section>*/}
+          </section>
 
           {isEditing && isOwner && (
             <div className="flex items-center gap-3">
@@ -389,6 +527,20 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      <FavoriteMoviesModal
+        isOpen={favoritesModalOpen}
+        onClose={() => {
+          setFavoritesModalOpen(false);
+          setActiveFavoriteSlot(null);
+        }}
+        initialFavorites={
+          activeFavoriteSlot !== null && favoriteMovieDetails[activeFavoriteSlot]
+            ? [favoriteMovieDetails[activeFavoriteSlot]]
+            : []
+        }
+        onSave={saveFavoriteMovies}
+      />
     </main>
   );
 }
