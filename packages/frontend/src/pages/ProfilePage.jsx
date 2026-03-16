@@ -40,6 +40,9 @@ export default function ProfilePage() {
   const [favoritesModalOpen, setFavoritesModalOpen] = useState(false);
   const [activeFavoriteSlot, setActiveFavoriteSlot] = useState(null);
 
+  // watchlist
+  const [watchlistVisibilityDraft, setWatchlistVisibilityDraft] = useState("public");
+
   const isOwner = useMemo(() => {
     return me?.username === username;
   }, [me, username]);
@@ -65,6 +68,8 @@ export default function ProfilePage() {
           throw new Error(`Profile error ${profRes.status}: ${txt}`);
         }
         const prof = await profRes.json();
+
+        setWatchlistVisibilityDraft(prof.watchlistVisibility || "public");
 
         const token = localStorage.getItem("token");
         let meData = null;
@@ -118,7 +123,10 @@ export default function ProfilePage() {
           "Content-Type": "application/json",
           ...authHeaders(),
         },
-        body: JSON.stringify({ bio: bioDraft}),
+        body: JSON.stringify({
+          bio: bioDraft,
+          watchlistVisibility: watchlistVisibilityDraft,
+        }),
       });
 
       if (!res.ok) {
@@ -406,22 +414,33 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {isOwner && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsEditing((v) => !v)}
-                className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 transition"
+          <div className="flex items-center gap-2">
+            {(isOwner || (profile.watchlistVisibility || "public") === "public") && (
+              <Link
+                to={`/profile/${profile.username}/watchlist`}
+                className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700 transition"
               >
-                {isEditing ? "Cancel" : "Edit"}
-              </button>
-              <button
-                onClick={handleLogout}
-                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 transition"
-              >
-                Logout
-              </button>
-            </div>
-          )}
+                View Watchlist
+              </Link>
+            )}
+
+            {isOwner && (
+              <>
+                <button
+                  onClick={() => setIsEditing((v) => !v)}
+                  className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 transition"
+                >
+                  {isEditing ? "Cancel" : "Edit"}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 transition"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 space-y-6">
