@@ -53,7 +53,7 @@ describe("TMDB queries", () => {
 
     const res = await request(app)
       .get("/api/tmdb/search")
-      .query({ query: "matrix" });
+      .query({ query: "matrix", type: "movie" });
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual([
@@ -69,6 +69,64 @@ describe("TMDB queries", () => {
     expect(tmdbRequestMock).toHaveBeenCalledWith("/search/movie", {
       query: "matrix",
       page: 1,
+    });
+  });
+
+  test("GET /api/tmdb/search defaults to multi and filters out person results", async () => {
+    tmdbRequestMock.mockResolvedValueOnce({
+      page: 1,
+      total_results: 3,
+      total_pages: 1,
+      results: [
+        {
+          id: 1396,
+          media_type: "tv",
+          name: "Breaking Bad",
+          overview: "A chemistry teacher...",
+          first_air_date: "2008-01-20",
+          poster_path: "/bb.jpg",
+        },
+        {
+          id: 603,
+          media_type: "movie",
+          title: "The Matrix",
+          overview: "A computer hacker learns...",
+          release_date: "1999-03-31",
+          poster_path: "/matrix.jpg",
+        },
+        {
+          id: 999,
+          media_type: "person",
+          name: "Some Person",
+        },
+      ],
+    });
+
+    const res = await request(app)
+      .get("/api/tmdb/search")
+      .query({ query: "breaking" });
+
+    expect(res.status).toBe(200);
+    expect(tmdbRequestMock).toHaveBeenCalledWith(
+      "/search/multi",
+      { query: "breaking", page: 1 },
+    );
+    expect(res.body.results).toHaveLength(2);
+    expect(res.body.results[0]).toEqual({
+      tmdbId: 1396,
+      type: "tv",
+      title: "Breaking Bad",
+      description: "A chemistry teacher...",
+      releaseDate: "2008-01-20",
+      posterPath: "/bb.jpg",
+    });
+    expect(res.body.results[1]).toEqual({
+      tmdbId: 603,
+      type: "movie",
+      title: "The Matrix",
+      description: "A computer hacker learns...",
+      releaseDate: "1999-03-31",
+      posterPath: "/matrix.jpg",
     });
   });
 

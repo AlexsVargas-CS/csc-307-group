@@ -10,7 +10,7 @@ export function posterURL(
 
 export async function searchFilms(
   query,
-  type = "movie"
+  type = "multi"
 ) {
   const params = new URLSearchParams({
     query,

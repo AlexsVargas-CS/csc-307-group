@@ -8,8 +8,15 @@ import { ApiError } from '../utils/apiError.js';
 
 const searchSchema = z.object({
   query: z.string().trim().min(1),
-  type: z.enum(['movie', 'tv']).default('movie'),
-  page: z.coerce.number().int().positive().max(1000).default(1)
+  type: z
+    .enum(["movie", "tv", "multi"])
+    .default("multi"),
+  page: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(1000)
+    .default(1),
 });
 
 const detailsSchema = z.object({
@@ -23,18 +30,29 @@ const getReleaseDate = (type, payload) =>
 
 export const searchTmdb = asyncHandler(async (req, res) => {
   const { query, type, page } = searchSchema.parse(req.query);
-  const searchPath = type === 'movie' ? '/search/movie' : '/search/tv';
+  const searchPath = `/search/${type}`;
 
   const data = await tmdbRequest(searchPath, { query, page });
 
-  const results = (data.results || []).map((item) => ({
-    tmdbId: item.id,
-    type,
-    title: getTitle(type, item),
-    description: item.overview || '',
-    releaseDate: getReleaseDate(type, item),
-    posterPath: item.poster_path || null
-  }));
+  const results = (data.results || [])
+    .filter(
+      (item) =>
+        type !== "multi" ||
+        item.media_type === "movie" ||
+        item.media_type === "tv"
+    )
+    .map((item) => {
+      const itemType =
+        type === "multi" ? item.media_type : type;
+      return {
+        tmdbId: item.id,
+        type: itemType,
+        title: getTitle(itemType, item),
+        description: item.overview || "",
+        releaseDate: getReleaseDate(itemType, item),
+        posterPath: item.poster_path || null,
+      };
+    });
 
   res.status(200).json({
     page: data.page || page,

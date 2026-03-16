@@ -82,7 +82,7 @@ export default function Navbar() {
         >
           <input
             type="text"
-            placeholder="Search films..."
+            placeholder="Search films or users..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-lg bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-400 outline-none ring-1 ring-gray-700 focus:ring-amber-400"

@@ -51,6 +51,33 @@ router.get("/me", authenticateUser, async (req, res) => {
   });
 });
 
+router.get("/users/search", async (req, res) => {
+  const query = (req.query.query || "").trim();
+  if (!query) {
+    return res.status(200).json({ results: [] });
+  }
+
+  const escaped = query.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
+
+  const users = await User.find({
+    username: { $regex: escaped, $options: "i" },
+  })
+    .limit(20)
+    .select("username profilePictureUrl bio")
+    .lean();
+
+  const results = users.map((u) => ({
+    username: u.username,
+    profilePictureUrl: u.profilePictureUrl || "",
+    bio: u.bio || "",
+  }));
+
+  return res.status(200).json({ results });
+});
+
 router.get("/users/:username", async (req, res) => {
   const { username } = req.params;
 
