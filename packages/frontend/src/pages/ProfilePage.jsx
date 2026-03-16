@@ -25,6 +25,7 @@ export default function ProfilePage() {
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [watchlistVisibilityLoading, setWatchlistVisibilityLoading] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [bioDraft, setBioDraft] = useState("");
@@ -338,12 +339,61 @@ export default function ProfilePage() {
 
   if (!profile) return null;
 
+  async function toggleWatchlistVisibility() {
+    if (!isOwner || watchlistVisibilityLoading) return;
+
+    const nextVisibility =
+      (profile.watchlistVisibility || "public") === "public"
+        ? "private"
+        : "public";
+
+    setWatchlistVisibilityLoading(true);
+    setMessage("");
+
+    try {
+      const res = await fetch(`${API_PREFIX}/api/watchlist/visibility`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          watchlistVisibility: nextVisibility,
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Visibility update failed ${res.status}: ${txt}`);
+      }
+
+      const data = await res.json();
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              watchlistVisibility: data.watchlistVisibility || nextVisibility,
+            }
+          : prev
+      );
+
+      setMessage(
+        `Your watchlist and logs are now ${data.watchlistVisibility || nextVisibility}.`
+      );
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setWatchlistVisibilityLoading(false);
+    }
+  }
+
   const displayedPfp =
     pfpPreviewUrl ||
     resolveImageUrl(profile.profilePictureUrl);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-4xl px-4 py-8">
       <Link to="/" className="mb-4 inline-block text-sm text-amber-400 hover:underline">
         &larr; Back
       </Link>
@@ -370,12 +420,8 @@ export default function ProfilePage() {
                 {profile.username}
               </h1>
 
-              <p className="mt-1 text-sm text-gray-400">
-                {isOwner ? "This is your profile." : "Viewing public profile."}
-              </p>
-
               {isOwner && (
-                <div className="mt-3 space-y-3">
+                <div className="mt-3 flex items-center gap-2">
                   <label className="inline-block cursor-pointer rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700 transition">
                     Change photo
                     <input
@@ -385,6 +431,18 @@ export default function ProfilePage() {
                       className="hidden"
                     />
                   </label>
+
+                  {isEditing && (
+                    <button
+                      onClick={toggleWatchlistVisibility}
+                      disabled={watchlistVisibilityLoading}
+                      className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700 transition disabled:opacity-60"
+                    >
+                      {watchlistVisibilityLoading
+                        ? "Saving..."
+                        : `Visibility: ${profile.watchlistVisibility === "private" ? "Private" : "Public"}`}
+                    </button>
+                  )}
 
                   {selectedPfpFile && (
                     <div className="flex flex-wrap items-center gap-2">
@@ -425,20 +483,21 @@ export default function ProfilePage() {
             )}
 
             {isOwner && (
-              <>
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setIsEditing((v) => !v)}
                   className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 transition"
                 >
                   {isEditing ? "Cancel" : "Edit"}
                 </button>
+
                 <button
                   onClick={handleLogout}
                   className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 transition"
                 >
                   Logout
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
