@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import FilmCard from "../components/FilmCard.jsx";
 
@@ -23,9 +23,79 @@ export default function Watchlist() {
   const [moviesLoading, setMoviesLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [selectedGenres, setSelectedGenres] = useState([]);
+  const [sortBy, setSortBy] = useState("title-asc");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filterDropdownRef = useRef(null);
+
   const isOwner = useMemo(() => {
     return me?.username === username;
   }, [me, username]);
+
+  const availableGenres = useMemo(() => {
+    const seen = new Map();
+
+    watchlistMovies.forEach((film) => {
+      (film.genreIds || []).forEach((genreId) => {
+        const numericId = Number(genreId);
+        const name = genreMap.get(numericId);
+
+        if (name) {
+          seen.set(numericId, name);
+        }
+      });
+    });
+
+    return Array.from(seen.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [watchlistMovies, genreMap]);
+
+  const displayedMovies = useMemo(() => {
+    let next = [...watchlistMovies];
+
+    if (selectedGenres.length > 0) {
+      next = next.filter((film) =>
+        (film.genreIds || []).some((genreId) =>
+          selectedGenres.includes(Number(genreId))
+        )
+      );
+    }
+
+    next.sort((a, b) => {
+      if (sortBy === "title-asc") {
+        return (a.title || "").localeCompare(b.title || "");
+      }
+
+      if (sortBy === "title-desc") {
+        return (b.title || "").localeCompare(a.title || "");
+      }
+
+      if (sortBy === "year-asc") {
+        const aYear = Number(a.releaseDate?.slice(0, 4)) || 0;
+        const bYear = Number(b.releaseDate?.slice(0, 4)) || 0;
+        return aYear - bYear;
+      }
+
+      if (sortBy === "year-desc") {
+        const aYear = Number(a.releaseDate?.slice(0, 4)) || 0;
+        const bYear = Number(b.releaseDate?.slice(0, 4)) || 0;
+        return bYear - aYear;
+      }
+
+      return 0;
+    });
+
+    return next;
+  }, [watchlistMovies, selectedGenres, sortBy]);
+
+  function toggleGenre(genreId) {
+    setSelectedGenres((prev) =>
+      prev.includes(genreId)
+        ? prev.filter((id) => id !== genreId)
+        : [...prev, genreId]
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -185,6 +255,23 @@ export default function Watchlist() {
     };
   }, [profile]);
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(event.target)
+      ) {
+        setFiltersOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
   if (loading) {
     return <p className="p-8 text-gray-400">Loading...</p>;
   }
@@ -232,6 +319,90 @@ export default function Watchlist() {
           </p>
         )}
 
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-y border-gray-800 py-3">
+          <div className="flex items-center gap-2">
+            <div ref={filterDropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                className="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-200 transition hover:bg-gray-700"
+              >
+                Filter
+              </button>
+
+              {filtersOpen && (
+                <div className="absolute left-0 top-full z-20 mt-2 w-72 rounded-lg border border-gray-800 bg-gray-900 p-3 shadow-xl">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      Genres
+                    </p>
+                    {selectedGenres.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGenres([])}
+                        className="text-xs text-amber-400 hover:underline"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {availableGenres.length === 0 ? (
+                    <p className="text-sm text-gray-500">No genres available.</p>
+                  ) : (
+                    <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                      {availableGenres.map((genre) => (
+                        <label
+                          key={genre.id}
+                          className="flex items-center gap-2 text-sm text-gray-200"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedGenres.includes(genre.id)}
+                            onChange={() => toggleGenre(genre.id)}
+                            className="h-4 w-4 accent-amber-400"
+                          />
+                          <span>{genre.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <span className="text-xs text-gray-500">
+              {selectedGenres.length > 0
+                ? `${selectedGenres.length} selected`
+                : "No filters"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="rounded-md bg-gray-800 px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="title-asc">Title (A–Z)</option>
+              <option value="title-desc">Title (Z–A)</option>
+              <option value="year-desc">Year (Newest)</option>
+              <option value="year-asc">Year (Oldest)</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedGenres([]);
+                setSortBy("title-asc");
+              }}
+              className="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-200 transition hover:bg-gray-700"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
         {moviesLoading ? (
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
@@ -247,9 +418,16 @@ export default function Watchlist() {
               {isOwner ? "Your watchlist is empty." : `${profile.username}'s watchlist is empty.`}
             </p>
           </div>
+        ) : displayedMovies.length === 0 ? (
+          <div className="mt-6 rounded-lg border border-dashed border-gray-700 bg-gray-800/40 p-8 text-center">
+            <p className="text-gray-300">No films match the selected filters.</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Try removing some genre filters or changing the sort.
+            </p>
+          </div>
         ) : (
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5">
-            {watchlistMovies.map((film) => (
+          <div className="mt-6 grid justify-center gap-5 [grid-template-columns:repeat(auto-fill,minmax(150px,180px))]">
+            {displayedMovies.map((film) => (
               <FilmCard
                 key={film.tmdbId}
                 film={film}
@@ -259,6 +437,35 @@ export default function Watchlist() {
           </div>
         )}
       </div>
+
+      <button
+        onClick={async () => {
+          const res = await fetch(`${API_PREFIX}/api/watchlist/155`, {
+            method: "POST",
+            headers: {
+              ...authHeaders(),
+            },
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            setMessage(`Add failed: ${txt}`);
+            return;
+          }
+
+          const meRes = await fetch(`${API_PREFIX}/api/me`, {
+            headers: authHeaders(),
+          });
+
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            setMe(meData);
+          }
+        }}
+        className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 transition"
+      >
+        Testing
+      </button>
     </main>
   );
 }
