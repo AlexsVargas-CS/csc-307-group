@@ -356,4 +356,49 @@ router.get("/users/:username/watchlist/details", async (req, res) => {
   });
 });
 
+router.get("/users/:username/logs", async (req, res) => {
+  const { username } = req.params;
+
+  const user = await User.findOne({ username }).lean();
+  if (!user) return res.status(404).send("User not found");
+
+  const ratings = await Rating.find({ userId: user._id })
+    .populate("filmId")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const items = await Promise.all(
+    ratings.map(async (rating) => {
+      const film = rating.filmId;
+
+      if (!film) {
+        return null;
+      }
+
+      const communityCategoryAverages = await Rating.aggregateDimensions(film._id);
+
+      return {
+        ratingId: rating._id,
+        tmdbId: film.tmdbId,
+        filmId: film._id,
+        type: film.type,
+        title: film.title,
+        releaseYear: film.releaseYear ?? null,
+        avgRating: film.avgRating ?? null,
+        ratingCount: film.ratingCount ?? 0,
+        userRating: rating.score ?? null,
+        reviewText: rating.reviewText ?? "",
+        categoryRatings: rating.categoryRatings ?? [],
+        communityCategoryAverages,
+        createdAt: rating.createdAt,
+      };
+    })
+  );
+
+  return res.status(200).json({
+    username: user.username,
+    items: items.filter(Boolean),
+  });
+});
+
 export default router;
