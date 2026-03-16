@@ -7,7 +7,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8000),
   MONGODB_URI: z.string().min(1),
-  TMDB_API_KEY: z.string().default('test_tmdb_key'),
+  TMDB_API_KEY: z.string().default('TMDB_API_KEY'),
   JWT_SECRET: z.string().min(8).default('dev_jwt_secret_please_change'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   CLIENT_ORIGIN: z.string().default('http://localhost:3000'),
