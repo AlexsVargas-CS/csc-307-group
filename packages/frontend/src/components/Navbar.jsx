@@ -52,7 +52,7 @@ export default function Navbar() {
     }
 
     loadProfilePicture();
-  }, [API_PREFIX]);
+
     function handleClickOutside(e) {
       if (
         menuRef.current &&
@@ -70,7 +70,8 @@ export default function Navbar() {
         "mousedown",
         handleClickOutside
       );
-  }, []);
+  }, [API_PREFIX]);
+      
 
   function handleSubmit(e) {
     e.preventDefault();
