@@ -11,7 +11,7 @@ export default function CategorySpotlightCard({
 
   return (
     <Link
-      to={`/film/${film.type || "movie"}/${film.tmdbId}`}
+      to={`/media/${film.type || "movie"}/${film.tmdbId}`}
       className="group relative flex overflow-hidden rounded-xl border border-gray-800 bg-gray-900/60 transition hover:border-gray-600"
     >
       {/* Poster side */}

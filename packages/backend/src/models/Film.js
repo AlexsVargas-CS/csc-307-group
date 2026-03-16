@@ -39,6 +39,15 @@ const filmSchema = new Schema(
     ],
     posterURL: {
       type: String
+    },
+    avgRating: {
+      type: Number,
+      default: 0,
+      index: true
+    },
+    ratingCount: {
+      type: Number,
+      default: 0
     }
   },
   { timestamps: true }
