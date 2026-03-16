@@ -1,19 +1,23 @@
-import { useState, useEffect } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   getFilmDetails,
   getSimilarFilms,
   posterURL,
 } from "../../api/tmdb.js";
+import {
+  lookupFilm,
+  getDimensions,
+  getFilmRatings,
+} from "../../api/ratings.js";
 import DimensionBar from "../../components/DimensionBar/DimensionBar.jsx";
 import ReviewCard from "../../components/ReviewCard/ReviewCard.jsx";
 import LogModal from "../../components/LogModal/LogModal.jsx";
-import {
-  mockAggregateRatings,
-  mockReviews,
-  DIMENSION_LABELS,
-} from "../../data/mockMediaData.js";
-import { useDevTools } from "../../context/DevToolsContext.jsx";
+import { DIMENSION_LABELS } from "../../data/mockMediaData.js";
 
 export default function MediaDetail() {
   const { mediaType, id } = useParams();
@@ -21,15 +25,45 @@ export default function MediaDetail() {
   const [similar, setSimilar] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [watchlisted, setWatchlisted] = useState(false);
+  const [watchlisted, setWatchlisted] =
+    useState(false);
   const [logOpen, setLogOpen] = useState(false);
-  const { getMockData } = useDevTools();
 
-  // Use dev tools mock data if available, otherwise fall back to defaults
-  const mediaKey = `${mediaType}_${id}`;
-  const devMock = getMockData(mediaKey);
-  const ratings = devMock?.ratings || mockAggregateRatings;
-  const reviews = devMock?.reviews || mockReviews;
+  // Rating state from backend
+  const [dimensions, setDimensions] = useState(
+    {}
+  );
+  const [reviews, setReviews] = useState([]);
+
+  const fetchRatings = useCallback(async () => {
+    const filmDoc = await lookupFilm(
+      id,
+      mediaType
+    );
+    if (!filmDoc) return;
+
+    const [dims, ratingsData] =
+      await Promise.all([
+        getDimensions(filmDoc._id),
+        getFilmRatings(filmDoc._id),
+      ]);
+
+    setDimensions(dims);
+    setReviews(
+      (ratingsData.ratings || []).map((r) => ({
+        id: r._id,
+        userId: r.userId?._id || r.userId,
+        username:
+          r.userId?.username || "Anonymous",
+        avatarUrl: null,
+        overallStarRating: r.score,
+        content: r.reviewText || "",
+        likeCount: 0,
+        isLikedByCurrentUser: false,
+        createdAt: r.createdAt,
+      }))
+    );
+  }, [id, mediaType]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,15 +79,18 @@ export default function MediaDetail() {
         const item = detailsRes.item;
         setFilm({
           title: item.title,
-          year: (item.releaseDate || "").slice(0, 4),
+          year: (item.releaseDate || "").slice(
+            0,
+            4
+          ),
           overview: item.description,
           posterUrl: posterURL(item.posterPath),
           genres: (item.genres || []).map(
-            (g) => g.name,
+            (g) => g.name
           ),
           director:
             item.credits?.crew?.find(
-              (c) => c.job === "Director",
+              (c) => c.job === "Director"
             )?.name || null,
         });
         setSimilar(
@@ -62,7 +99,7 @@ export default function MediaDetail() {
             title: s.title,
             posterUrl: posterURL(s.posterPath),
             mediaType: s.type,
-          })),
+          }))
         );
       })
       .catch((err) => {
@@ -72,14 +109,18 @@ export default function MediaDetail() {
         if (!cancelled) setLoading(false);
       });
 
+    fetchRatings();
+
     return () => {
       cancelled = true;
     };
-  }, [mediaType, id]);
+  }, [mediaType, id, fetchRatings]);
 
   if (loading) {
     return (
-      <p className="p-8 text-gray-400">Loading...</p>
+      <p className="p-8 text-gray-400">
+        Loading...
+      </p>
     );
   }
   if (error) {
@@ -88,6 +129,9 @@ export default function MediaDetail() {
     );
   }
   if (!film) return null;
+
+  const hasDimensions =
+    Object.keys(dimensions).length > 0;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -147,7 +191,9 @@ export default function MediaDetail() {
           {/* Action buttons */}
           <div className="mt-6 flex gap-3">
             <button
-              onClick={() => setWatchlisted((w) => !w)}
+              onClick={() =>
+                setWatchlisted((w) => !w)
+              }
               className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
                 watchlisted
                   ? "bg-amber-400 text-black"
@@ -155,7 +201,7 @@ export default function MediaDetail() {
               }`}
             >
               {watchlisted
-                ? "✓ Watchlisted"
+                ? "\u2713 Watchlisted"
                 : "+ Watchlist"}
             </button>
             <button
@@ -172,15 +218,27 @@ export default function MediaDetail() {
           <h2 className="mb-4 text-lg font-semibold text-white">
             Community Ratings
           </h2>
-          {Object.entries(ratings).map(
-            ([key, data]) => (
-              <DimensionBar
-                key={key}
-                label={DIMENSION_LABELS[key]}
-                average={data.average}
-                count={data.count}
-              />
-            ),
+          {hasDimensions ? (
+            Object.keys(DIMENSION_LABELS).map(
+              (key) => {
+                const data = dimensions[key];
+                if (!data) return null;
+                return (
+                  <DimensionBar
+                    key={key}
+                    label={
+                      DIMENSION_LABELS[key]
+                    }
+                    average={data.average * 2}
+                    count={data.count}
+                  />
+                );
+              }
+            )
+          ) : (
+            <p className="text-sm text-gray-500">
+              No ratings yet. Be the first!
+            </p>
           )}
         </div>
       </div>
@@ -192,14 +250,20 @@ export default function MediaDetail() {
         </h2>
         <hr className="mt-2 mb-6 border-gray-800" />
 
-        <div className="space-y-4">
-          {reviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-            />
-          ))}
-        </div>
+        {reviews.length > 0 ? (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            No reviews yet.
+          </p>
+        )}
       </section>
 
       {/* ── ZONE 4 — Similar Films ── */}
@@ -212,7 +276,9 @@ export default function MediaDetail() {
 
           <div
             className="flex gap-4 overflow-x-auto pb-2"
-            style={{ scrollbarWidth: "none" }}
+            style={{
+              scrollbarWidth: "none",
+            }}
           >
             {similar.map((s) => (
               <Link
@@ -246,6 +312,7 @@ export default function MediaDetail() {
         onClose={() => setLogOpen(false)}
         mediaId={id}
         mediaType={mediaType}
+        onSubmitted={fetchRatings}
       />
     </main>
   );

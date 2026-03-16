@@ -2,6 +2,11 @@ import { useState } from "react";
 import Modal from "../Modal/Modal.jsx";
 import StarRating from "../StarRating/StarRating.jsx";
 import { DIMENSION_LABELS } from "../../data/mockMediaData.js";
+import { useAuth } from "../../context/AuthContext.jsx";
+import {
+  lookupFilm,
+  submitRating,
+} from "../../api/ratings.js";
 
 const DIMENSIONS = Object.keys(DIMENSION_LABELS);
 
@@ -9,23 +14,37 @@ const DIMENSIONS = Object.keys(DIMENSION_LABELS);
  * Rating / review submission modal.
  *
  * Props:
- *  - isOpen    : boolean
- *  - onClose   : () => void
- *  - mediaId   : string
- *  - mediaType : string
+ *  - isOpen      : boolean
+ *  - onClose     : () => void
+ *  - mediaId     : string (tmdbId)
+ *  - mediaType   : string
+ *  - onSubmitted : () => void (optional callback after successful submit)
  */
 export default function LogModal({
   isOpen,
   onClose,
   mediaId,
   mediaType,
+  onSubmitted,
 }) {
-  const today = new Date().toISOString().split("T")[0];
-  const [watchedDate, setWatchedDate] = useState(today);
-  const [reviewText, setReviewText] = useState("");
+  const { token, isAuthenticated } = useAuth();
+  const today = new Date()
+    .toISOString()
+    .split("T")[0];
+  const [watchedDate, setWatchedDate] =
+    useState(today);
+  const [reviewText, setReviewText] =
+    useState("");
+  const [overallScore, setOverallScore] =
+    useState(0);
   const [ratings, setRatings] = useState(
-    Object.fromEntries(DIMENSIONS.map((d) => [d, null])),
+    Object.fromEntries(
+      DIMENSIONS.map((d) => [d, null])
+    ),
   );
+  const [submitting, setSubmitting] =
+    useState(false);
+  const [error, setError] = useState(null);
 
   function updateRating(dimension, value) {
     setRatings((prev) => ({
@@ -34,26 +53,74 @@ export default function LogModal({
     }));
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
-
-    const submission = {
-      mediaId,
-      mediaType,
-      watchedDate,
-      reviewText,
-      ratings,
-    };
-
-    console.log("Log submission:", submission);
-    onClose();
-
-    // Reset form
+  function resetForm() {
     setWatchedDate(today);
     setReviewText("");
+    setOverallScore(0);
     setRatings(
-      Object.fromEntries(DIMENSIONS.map((d) => [d, null])),
+      Object.fromEntries(
+        DIMENSIONS.map((d) => [d, null])
+      ),
     );
+    setError(null);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError(null);
+
+    if (!isAuthenticated) {
+      setError("Please log in to rate.");
+      return;
+    }
+
+    // Round to nearest integer for backend
+    const score = Math.round(overallScore);
+    if (score < 1 || score > 5) {
+      setError(
+        "Please select an overall rating (1-5 stars)."
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Look up the Film's MongoDB _id
+      const film = await lookupFilm(
+        mediaId,
+        mediaType
+      );
+      if (!film) {
+        setError(
+          "Film not found. Try refreshing."
+        );
+        return;
+      }
+
+      // Build category ratings (only non-null)
+      const categoryRatings = DIMENSIONS.filter(
+        (d) => ratings[d] != null
+      ).map((d) => ({
+        category: d,
+        score: Math.round(ratings[d]),
+      }));
+
+      await submitRating(
+        film._id,
+        { score, categoryRatings, reviewText },
+        token
+      );
+
+      resetForm();
+      onClose();
+      if (onSubmitted) onSubmitted();
+    } catch (err) {
+      setError(
+        err.message || "Failed to submit rating."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -62,7 +129,23 @@ export default function LogModal({
         Log & Rate
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6"
+      >
+        {/* Overall rating */}
+        <div>
+          <label className="mb-2 block text-sm text-gray-400">
+            Overall Rating *
+          </label>
+          <StarRating
+            value={overallScore}
+            onChange={setOverallScore}
+            mode="interactive"
+            size="text-2xl"
+          />
+        </div>
+
         {/* Date */}
         <div>
           <label className="mb-1 block text-sm text-gray-400">
@@ -71,7 +154,9 @@ export default function LogModal({
           <input
             type="date"
             value={watchedDate}
-            onChange={(e) => setWatchedDate(e.target.value)}
+            onChange={(e) =>
+              setWatchedDate(e.target.value)
+            }
             className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-amber-400 focus:outline-none"
           />
         </div>
@@ -83,7 +168,9 @@ export default function LogModal({
           </label>
           <textarea
             value={reviewText}
-            onChange={(e) => setReviewText(e.target.value)}
+            onChange={(e) =>
+              setReviewText(e.target.value)
+            }
             placeholder="What did you think?"
             rows={4}
             className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none"
@@ -103,7 +190,9 @@ export default function LogModal({
                 </span>
                 <StarRating
                   value={ratings[dim] ?? 0}
-                  onChange={(val) => updateRating(dim, val)}
+                  onChange={(val) =>
+                    updateRating(dim, val)
+                  }
                   mode="interactive"
                   size="text-xl"
                 />
@@ -112,12 +201,22 @@ export default function LogModal({
           </div>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <p className="text-sm text-red-400">
+            {error}
+          </p>
+        )}
+
         {/* Submit */}
         <button
           type="submit"
-          className="w-full rounded-lg bg-amber-400 py-2.5 font-semibold text-black transition-colors hover:bg-amber-500"
+          disabled={submitting}
+          className="w-full rounded-lg bg-amber-400 py-2.5 font-semibold text-black transition-colors hover:bg-amber-500 disabled:opacity-50"
         >
-          Submit Rating
+          {submitting
+            ? "Submitting..."
+            : "Submit Rating"}
         </button>
       </form>
     </Modal>
