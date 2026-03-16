@@ -16,19 +16,12 @@ function getUsernameFromToken() {
 export default function Navbar() {
   const [query, setQuery] = useState("");
   const [username, setUsername] = useState(null);
+  const [profilePictureUrl, setProfilePictureUrl] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    setUsername(getUsernameFromToken());
-  }, []);
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    navigate(`/search?query=${encodeURIComponent(trimmed)}`);
-    setQuery("");
-  }
+  const API_PREFIX =
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:8000";
 
   function handleProfileClick() {
     if (username) {
@@ -38,11 +31,44 @@ export default function Navbar() {
     }
   }
 
+  useEffect(() => {
+    const usernameFromToken = getUsernameFromToken();
+    setUsername(usernameFromToken);
+
+    if (!usernameFromToken) {
+      setProfilePictureUrl(null);
+      return;
+    }
+
+    async function loadProfilePicture() {
+      try {
+        const res = await fetch(`${API_PREFIX}/api/users/${usernameFromToken}`);
+        if (!res.ok) {
+          setProfilePictureUrl(null);
+          return;
+        }
+
+        const data = await res.json();
+        setProfilePictureUrl(data.profilePictureUrl || null);
+      } catch {
+        setProfilePictureUrl(null);
+      }
+    }
+
+    loadProfilePicture();
+  }, [API_PREFIX]);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    navigate(`/search?query=${encodeURIComponent(trimmed)}`);
+    setQuery("");
+  }
+
   return (
     <nav className="sticky top-0 z-50 bg-gray-900/90 px-6 py-3 shadow-lg backdrop-blur">
       <div className="flex items-center justify-between">
-        
-        {/* Left - Logo */}
         <Link
           to="/"
           className="text-xl font-bold tracking-wide text-amber-400"
@@ -50,10 +76,9 @@ export default function Navbar() {
           Showme
         </Link>
 
-        {/* Center - Search */}
         <form
           onSubmit={handleSubmit}
-          className="flex w-full max-w-md mx-8"
+          className="mx-8 flex w-full max-w-md"
         >
           <input
             type="text"
@@ -64,21 +89,28 @@ export default function Navbar() {
           />
         </form>
 
-        {/* Right - Profile Button */}
         <button
           onClick={handleProfileClick}
-          className="flex items-center justify-center rounded-full bg-gray-800 p-2 text-gray-300 hover:bg-gray-700 hover:text-white transition"
+          className="flex items-center justify-center transition"
           title={username ? "Your profile" : "Login"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-          </svg>
+          {username ? (
+            profilePictureUrl ? (
+              <img
+                src={`${API_PREFIX}${profilePictureUrl}`}
+                alt="Profile"
+                className="h-9 w-9 rounded-full border border-gray-700 object-cover transition hover:border-amber-400"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-800 text-sm font-bold text-gray-300 hover:bg-gray-700">
+                {username[0].toUpperCase()}
+              </div>
+            )
+          ) : (
+            <span className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-gray-900 hover:bg-amber-400">
+              Login
+            </span>
+          )}
         </button>
       </div>
     </nav>
