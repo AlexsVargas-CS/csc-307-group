@@ -12,6 +12,7 @@
     "seed:genres": "node src/scripts/seedGenres.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --passWithNoTests",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --coverage --passWithNoTests",
+    "test:coverage:model": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.models.config.js --runInBand --coverage --passWithNoTests",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
