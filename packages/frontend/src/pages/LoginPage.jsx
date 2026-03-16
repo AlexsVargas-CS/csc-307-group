@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function LoginPage({
@@ -11,6 +12,7 @@ export default function LoginPage({
     username: "",
     pwd: ""
   });
+  const [confirmPwd, setConfirmPwd] = useState("");
   const [error, setError] = useState("");
 
   function handleChange(e) {
@@ -24,16 +26,26 @@ export default function LoginPage({
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
     try {
       if (isSignup) {
+        if (creds.pwd !== confirmPwd) {
+          setError("Passwords do not match");
+          return;
+        }
         await signup(creds);
       } else {
         await login(creds);
       }
+
+      // Only reload after successful login/signup
+      window.location.reload();
     } catch (err) {
       setError(err.message);
+      if (!isSignup) {
+        setCreds((prev) => ({ ...prev, pwd: "" }));
+      }
     }
-    window.location.reload()
   }
 
   return (
@@ -72,12 +84,33 @@ export default function LoginPage({
           required
         />
 
+        {isSignup && (
+          <input
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirm Password"
+            className="w-full mb-6 px-4 py-2 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            value={confirmPwd}
+            onChange={(e) => setConfirmPwd(e.target.value)}
+            required
+          />
+        )}
+
         <button
           type="submit"
           className="w-full py-2 rounded-lg bg-amber-400 text-black font-semibold hover:bg-amber-300 transition"
         >
           {isSignup ? "Sign Up" : "Log In"}
         </button>
+
+        {!isSignup && (
+          <p className="mt-4 text-center text-sm text-gray-400">
+            New user?{" "}
+            <Link to="/signup" className="text-amber-400 hover:underline">
+              Sign up here
+            </Link>
+          </p>
+        )}
       </form>
     </div>
   );

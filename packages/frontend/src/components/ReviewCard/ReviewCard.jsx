@@ -1,12 +1,16 @@
 import { useState } from "react";
 import StarRating from "../StarRating/StarRating.jsx";
 
-/**
- * A single review card.
- *
- * Props:
- *  - review : { id, username, avatarUrl, overallStarRating, content, likeCount, isLikedByCurrentUser, createdAt }
- */
+const API_PREFIX =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:3001";
+
+function resolveImageUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `${API_PREFIX}${path}`;
+}
+
 export default function ReviewCard({ review }) {
   const [liked, setLiked] = useState(
     review.isLikedByCurrentUser,
@@ -24,20 +28,22 @@ export default function ReviewCard({ review }) {
     { month: "short", day: "numeric", year: "numeric" },
   );
 
+  const avatarSrc = resolveImageUrl(review.avatarUrl);
+
   return (
-    <div className="rounded-lg bg-[#1e1e1e] p-4 border border-gray-800">
-      {/* Header */}
+    <div className="rounded-lg border border-gray-800 bg-[#1e1e1e] p-4">
       <div className="flex items-center gap-3">
-        {/* Avatar placeholder */}
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-700 text-gray-400">
-          <svg
-            className="h-5 w-5"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-          </svg>
-        </div>
+        {avatarSrc ? (
+          <img
+            src={avatarSrc}
+            alt={`${review.username} avatar`}
+            className="h-9 w-9 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-700 text-sm font-semibold text-gray-300">
+            {review.username?.[0]?.toUpperCase() || "?"}
+          </div>
+        )}
 
         <div className="flex-1">
           <span className="font-semibold text-white">
@@ -55,7 +61,6 @@ export default function ReviewCard({ review }) {
         />
       </div>
 
-      {/* Review body */}
       <div className="mt-3">
         <p
           className={`text-sm leading-relaxed text-gray-300 ${!expanded ? "line-clamp-4" : ""}`}
@@ -72,7 +77,6 @@ export default function ReviewCard({ review }) {
         )}
       </div>
 
-      {/* Like button */}
       <div className="mt-3">
         <button
           onClick={toggleLike}
