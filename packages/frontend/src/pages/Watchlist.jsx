@@ -328,7 +328,7 @@ export default function Watchlist() {
   if (!profile) return null;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
+    <main className="mx-auto max-w-6xl px-4 py-8">
       <Link to={`/profile/${username}`} className="mb-4 inline-block text-sm text-amber-400 hover:underline">
         &larr; Back to profile
       </Link>
@@ -493,35 +493,6 @@ export default function Watchlist() {
           </div>
         )}
       </div>
-
-      <button
-        onClick={async () => {
-          const res = await fetch(`${API_PREFIX}/api/watchlist/550`, {
-            method: "POST",
-            headers: {
-              ...authHeaders(),
-            },
-          });
-
-          if (!res.ok) {
-            const txt = await res.text();
-            setMessage(`Add failed: ${txt}`);
-            return;
-          }
-
-          const meRes = await fetch(`${API_PREFIX}/api/me`, {
-            headers: authHeaders(),
-          });
-
-          if (meRes.ok) {
-            const meData = await meRes.json();
-            setMe(meData);
-          }
-        }}
-        className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 transition"
-      >
-        Testing
-      </button>
     </main>
   );
 }

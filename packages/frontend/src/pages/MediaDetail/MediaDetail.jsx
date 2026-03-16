@@ -19,6 +19,11 @@ import ReviewCard from "../../components/ReviewCard/ReviewCard.jsx";
 import LogModal from "../../components/LogModal/LogModal.jsx";
 import { DIMENSION_LABELS } from "../../data/mockMediaData.js";
 
+function authHeaders() {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export default function MediaDetail() {
   const { mediaType, id } = useParams();
   const [film, setFilm] = useState(null);
@@ -27,6 +32,8 @@ export default function MediaDetail() {
   const [error, setError] = useState(null);
   const [watchlisted, setWatchlisted] =
     useState(false);
+  const [watchlistLoading, setWatchlistLoading] =
+    useState(false);
   const [logOpen, setLogOpen] = useState(false);
 
   // Rating state from backend
@@ -34,6 +41,74 @@ export default function MediaDetail() {
     {}
   );
   const [reviews, setReviews] = useState([]);
+
+  const fetchWatchlistState = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setWatchlisted(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/me`,
+        {
+          headers: authHeaders(),
+        }
+      );
+
+      if (!res.ok) {
+        setWatchlisted(false);
+        return;
+      }
+
+      const data = await res.json();
+      const watchlist = Array.isArray(data.watchlist)
+        ? data.watchlist
+        : [];
+
+      setWatchlisted(
+        watchlist.includes(Number(id))
+      );
+    } catch {
+      setWatchlisted(false);
+    }
+  }, [id]);
+
+  const handleWatchlistToggle = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("You must be logged in to use the watchlist.");
+      return;
+    }
+
+    setWatchlistLoading(true);
+
+    try {
+      const method = watchlisted ? "DELETE" : "POST";
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/watchlist/${id}`,
+        {
+          method,
+          headers: authHeaders(),
+        }
+      );
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Watchlist update failed");
+      }
+
+      setWatchlisted((prev) => !prev);
+    } catch (err) {
+      setError(
+        err.message || "Failed to update watchlist."
+      );
+    } finally {
+      setWatchlistLoading(false);
+    }
+  }, [id, watchlisted]);
 
   const fetchRatings = useCallback(async () => {
     const filmDoc = await lookupFilm(
@@ -110,11 +185,12 @@ export default function MediaDetail() {
       });
 
     fetchRatings();
+    fetchWatchlistState();
 
     return () => {
       cancelled = true;
     };
-  }, [mediaType, id, fetchRatings]);
+  }, [mediaType, id, fetchRatings, fetchWatchlistState]);
 
   if (loading) {
     return (
@@ -191,16 +267,17 @@ export default function MediaDetail() {
           {/* Action buttons */}
           <div className="mt-6 flex gap-3">
             <button
-              onClick={() =>
-                setWatchlisted((w) => !w)
-              }
-              className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
+              onClick={handleWatchlistToggle}
+              disabled={watchlistLoading}
+              className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                 watchlisted
                   ? "bg-amber-400 text-black"
                   : "border border-gray-600 text-gray-300 hover:border-amber-400 hover:text-amber-400"
               }`}
             >
-              {watchlisted
+              {watchlistLoading
+                ? "Saving..."
+                : watchlisted
                 ? "\u2713 Watchlisted"
                 : "+ Watchlist"}
             </button>
