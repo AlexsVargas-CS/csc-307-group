@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 function getUsernameFromToken() {
   const token = localStorage.getItem("token");
@@ -18,10 +22,22 @@ export default function Navbar() {
   const [username, setUsername] = useState(null);
   const [profilePictureUrl, setProfilePictureUrl] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const API_PREFIX =
     import.meta.env.VITE_API_URL ||
-    "http://localhost:8000";
+    "http://localhost:3001";
+
+  function resolveImageUrl(path) {
+    if (!path) return null;
+    if (
+      path.startsWith("http://") ||
+      path.startsWith("https://")
+    ) {
+      return path;
+    }
+    return `${API_PREFIX}${path}`;
+  }
 
   function handleProfileClick() {
     if (username) {
@@ -32,31 +48,46 @@ export default function Navbar() {
   }
 
   useEffect(() => {
-    const usernameFromToken = getUsernameFromToken();
-    setUsername(usernameFromToken);
+    async function syncProfilePicture() {
+      const usernameFromToken = getUsernameFromToken();
+      setUsername(usernameFromToken);
 
-    if (!usernameFromToken) {
-      setProfilePictureUrl(null);
-      return;
-    }
+      if (!usernameFromToken) {
+        setProfilePictureUrl(null);
+        return;
+      }
 
-    async function loadProfilePicture() {
       try {
-        const res = await fetch(`${API_PREFIX}/api/users/${usernameFromToken}`);
+        const res = await fetch(
+          `${API_PREFIX}/api/users/${usernameFromToken}`,
+        );
         if (!res.ok) {
           setProfilePictureUrl(null);
           return;
         }
 
         const data = await res.json();
-        setProfilePictureUrl(data.profilePictureUrl || null);
+        setProfilePictureUrl(
+          data.profilePictureUrl || null,
+        );
       } catch {
         setProfilePictureUrl(null);
       }
     }
 
-    loadProfilePicture();
-  }, [API_PREFIX]);
+    syncProfilePicture();
+    window.addEventListener(
+      "profile-updated",
+      syncProfilePicture,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profile-updated",
+        syncProfilePicture,
+      );
+    };
+  }, [API_PREFIX, location.pathname]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -97,7 +128,7 @@ export default function Navbar() {
           {username ? (
             profilePictureUrl ? (
               <img
-                src={`${API_PREFIX}${profilePictureUrl}`}
+                src={resolveImageUrl(profilePictureUrl)}
                 alt="Profile"
                 className="h-9 w-9 rounded-full border border-gray-700 object-cover transition hover:border-amber-400"
               />

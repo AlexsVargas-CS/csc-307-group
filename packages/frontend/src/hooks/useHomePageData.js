@@ -274,7 +274,7 @@ export async function loadHomePageData({
     // Build upcoming date range
     const today = now.toISOString().slice(0, 10);
     const futureDate = new Date(
-      now.getTime() + 90 * 86400000,
+      now.getTime() + 270 * 86400000,
     )
       .toISOString()
       .slice(0, 10);
@@ -334,13 +334,13 @@ export async function loadHomePageData({
       error: false,
       hero,
       genreMap,
-      trending: trendingList.slice(0, 8),
+      trending: trendingList.slice(0, 16),
       nowPlaying: nowPlayingList,
       upcoming: upcomingList
         .filter(
           (f) => f.posterPath && f.releaseDate > today,
         )
-        .slice(0, 6),
+        .slice(0, 18),
       categorySpotlights:
         buildCategorySpotlights(pool),
       mostDiscussed: buildMostDiscussed(pool),

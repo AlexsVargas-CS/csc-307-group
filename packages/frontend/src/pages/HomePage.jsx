@@ -5,7 +5,6 @@ import HomeSectionHeader from "../components/home/HomeSectionHeader.jsx";
 import CategorySpotlightGrid from "../components/home/CategorySpotlightGrid.jsx";
 import MostDiscussedList from "../components/home/MostDiscussedList.jsx";
 import PulseCard from "../components/home/PulseCard.jsx";
-import CuratedListTile from "../components/home/CuratedListTile.jsx";
 import FilmRow from "../components/FilmRow/FilmRow.jsx";
 import {
   HeroSkeleton,
@@ -44,9 +43,6 @@ export default function HomePage() {
     data.upcoming && data.upcoming.length > 0;
   const hasPulseCards =
     data.pulseCards && data.pulseCards.length > 0;
-  const hasCuratedLists =
-    data.curatedLists &&
-    data.curatedLists.length > 0;
 
   return (
     <main>
@@ -123,24 +119,6 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-
-        {/* 7. Curated Lists */}
-        {hasCuratedLists && (
-          <section className="px-8">
-            <HomeSectionHeader
-              title="Curated Lists"
-              subtitle="Editorially grouped from what's trending"
-            />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {data.curatedLists.map((list) => (
-                <CuratedListTile
-                  key={list.title}
-                  list={list}
-                />
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </main>
   );

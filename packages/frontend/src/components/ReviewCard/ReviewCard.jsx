@@ -7,12 +7,17 @@ import StarRating from "../StarRating/StarRating.jsx";
  * Props:
  *  - review : { id, username, avatarUrl, overallStarRating, content, likeCount, isLikedByCurrentUser, createdAt }
  */
-export default function ReviewCard({ review }) {
+export default function ReviewCard({
+  review,
+  onEdit,
+  onDelete,
+}) {
   const [liked, setLiked] = useState(
     review.isLikedByCurrentUser,
   );
   const [likes, setLikes] = useState(review.likeCount);
   const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function toggleLike() {
     setLiked((prev) => !prev);
@@ -53,6 +58,47 @@ export default function ReviewCard({ review }) {
           mode="display"
           size="text-base"
         />
+
+        {review.isOwner && (
+          <div className="relative">
+            <button
+              onClick={() =>
+                setMenuOpen((open) => !open)
+              }
+              className="ml-2 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-800 hover:text-white"
+              aria-label="Review options"
+            >
+              <span className="flex flex-col items-center gap-0.5">
+                <span className="h-1 w-1 rounded-full bg-current" />
+                <span className="h-1 w-1 rounded-full bg-current" />
+                <span className="h-1 w-1 rounded-full bg-current" />
+              </span>
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-10 z-10 min-w-28 overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEdit?.();
+                  }}
+                  className="block w-full px-3 py-2 text-left text-sm text-gray-200 transition hover:bg-gray-800"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete?.();
+                  }}
+                  className="block w-full px-3 py-2 text-left text-sm text-red-400 transition hover:bg-gray-800"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Review body */}
@@ -73,7 +119,7 @@ export default function ReviewCard({ review }) {
       </div>
 
       {/* Like button */}
-      <div className="mt-3">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <button
           onClick={toggleLike}
           className="flex items-center gap-1.5 text-sm transition-colors hover:text-amber-400"
@@ -89,6 +135,7 @@ export default function ReviewCard({ review }) {
             {likes} {likes === 1 ? "like" : "likes"}
           </span>
         </button>
+
       </div>
     </div>
   );

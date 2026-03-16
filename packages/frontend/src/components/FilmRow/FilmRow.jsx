@@ -17,7 +17,6 @@ function SkeletonCard() {
 
 export default function FilmRow({
   title,
-  seeAllHref = "#",
   films,
   loading,
   error,
@@ -38,16 +37,10 @@ export default function FilmRow({
   return (
     <section className="px-6 py-6">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4">
         <h2 className="text-xl font-bold text-white">
           {title}
         </h2>
-        <a
-          href={seeAllHref}
-          className="text-sm font-medium text-amber-400 transition hover:text-amber-300"
-        >
-          See All &rarr;
-        </a>
       </div>
 
       {/* Error state */}

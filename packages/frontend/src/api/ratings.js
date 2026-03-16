@@ -57,6 +57,23 @@ export async function submitRating(
   return res.json();
 }
 
+export async function deleteRating(filmId, token) {
+  const res = await fetch(
+    `${API_BASE}/api/ratings/${filmId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || "Failed to delete rating");
+  }
+  return res.json();
+}
+
 /**
  * Get the current user's rating for a film.
  */

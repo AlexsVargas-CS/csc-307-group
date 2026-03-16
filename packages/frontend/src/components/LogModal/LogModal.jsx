@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "../Modal/Modal.jsx";
 import StarRating from "../StarRating/StarRating.jsx";
 import { DIMENSION_LABELS } from "../../data/mockMediaData.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import {
   lookupFilm,
+  getMyRating,
   submitRating,
 } from "../../api/ratings.js";
 
@@ -26,6 +27,7 @@ export default function LogModal({
   mediaId,
   mediaType,
   onSubmitted,
+  initialRating = null,
 }) {
   const { token, isAuthenticated } = useAuth();
   const today = new Date()
@@ -64,6 +66,61 @@ export default function LogModal({
     );
     setError(null);
   }
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function loadExistingRating() {
+      if (!isAuthenticated || !token) {
+        resetForm();
+        return;
+      }
+
+      const existing =
+        initialRating ||
+        (await (async () => {
+          const film = await lookupFilm(
+            mediaId,
+            mediaType
+          );
+          if (!film) return null;
+          return getMyRating(film._id, token);
+        })());
+
+      if (!existing) {
+        resetForm();
+        return;
+      }
+
+      setReviewText(existing.reviewText || "");
+      setOverallScore(existing.score || 0);
+      setRatings(
+        Object.fromEntries(
+          DIMENSIONS.map((dimension) => {
+            const found = (
+              existing.categoryRatings || []
+            ).find(
+              (item) => item.category === dimension,
+            );
+            return [
+              dimension,
+              found ? found.score : null,
+            ];
+          }),
+        ),
+      );
+      setError(null);
+    }
+
+    loadExistingRating();
+  }, [
+    initialRating,
+    isAuthenticated,
+    isOpen,
+    mediaId,
+    mediaType,
+    token,
+  ]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -126,7 +183,7 @@ export default function LogModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <h2 className="mb-6 text-xl font-bold text-white">
-        Log & Rate
+        Rate
       </h2>
 
       <form
@@ -216,7 +273,9 @@ export default function LogModal({
         >
           {submitting
             ? "Submitting..."
-            : "Submit Rating"}
+            : initialRating
+              ? "Save Changes"
+              : "Submit Rating"}
         </button>
       </form>
     </Modal>

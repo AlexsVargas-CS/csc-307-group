@@ -11,16 +11,20 @@ import {
 } from "../../api/tmdb.js";
 import {
   lookupFilm,
+  deleteRating,
   getDimensions,
   getFilmRatings,
+  getMyRating,
 } from "../../api/ratings.js";
 import DimensionBar from "../../components/DimensionBar/DimensionBar.jsx";
 import ReviewCard from "../../components/ReviewCard/ReviewCard.jsx";
 import LogModal from "../../components/LogModal/LogModal.jsx";
 import { DIMENSION_LABELS } from "../../data/mockMediaData.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function MediaDetail() {
   const { mediaType, id } = useParams();
+  const { token, user } = useAuth();
   const [film, setFilm] = useState(null);
   const [similar, setSimilar] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +38,7 @@ export default function MediaDetail() {
     {}
   );
   const [reviews, setReviews] = useState([]);
+  const [myRating, setMyRating] = useState(null);
 
   const fetchRatings = useCallback(async () => {
     const filmDoc = await lookupFilm(
@@ -42,13 +47,17 @@ export default function MediaDetail() {
     );
     if (!filmDoc) return;
 
-    const [dims, ratingsData] =
+    const [dims, ratingsData, myRatingData] =
       await Promise.all([
         getDimensions(filmDoc._id),
         getFilmRatings(filmDoc._id),
+        token
+          ? getMyRating(filmDoc._id, token)
+          : Promise.resolve(null),
       ]);
 
     setDimensions(dims);
+    setMyRating(myRatingData);
     setReviews(
       (ratingsData.ratings || []).map((r) => ({
         id: r._id,
@@ -58,12 +67,16 @@ export default function MediaDetail() {
         avatarUrl: null,
         overallStarRating: r.score,
         content: r.reviewText || "",
+        categoryRatings: r.categoryRatings || [],
         likeCount: 0,
         isLikedByCurrentUser: false,
+        isOwner:
+          (r.userId?._id || r.userId) === user?._id ||
+          r.userId?.username === user?.username,
         createdAt: r.createdAt,
       }))
     );
-  }, [id, mediaType]);
+  }, [id, mediaType, token, user?._id, user?.username]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +145,24 @@ export default function MediaDetail() {
 
   const hasDimensions =
     Object.keys(dimensions).length > 0;
+
+  async function handleDeleteReview() {
+    if (!film || !token) return;
+    const confirmed = window.confirm(
+      "Delete your review for this movie?",
+    );
+    if (!confirmed) return;
+
+    try {
+      const filmDoc = await lookupFilm(id, mediaType);
+      if (!filmDoc) return;
+      await deleteRating(filmDoc._id, token);
+      setMyRating(null);
+      await fetchRatings();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -208,7 +239,7 @@ export default function MediaDetail() {
               onClick={() => setLogOpen(true)}
               className="rounded-lg bg-amber-400 px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-amber-500"
             >
-              Log
+              Rate
             </button>
           </div>
         </div>
@@ -256,6 +287,8 @@ export default function MediaDetail() {
               <ReviewCard
                 key={review.id}
                 review={review}
+                onEdit={() => setLogOpen(true)}
+                onDelete={handleDeleteReview}
               />
             ))}
           </div>
@@ -313,6 +346,7 @@ export default function MediaDetail() {
         mediaId={id}
         mediaType={mediaType}
         onSubmitted={fetchRatings}
+        initialRating={myRating}
       />
     </main>
   );

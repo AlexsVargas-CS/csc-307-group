@@ -242,6 +242,9 @@ export default function ProfilePage() {
         ...prev,
         profilePictureUrl: data.profilePictureUrl,
       }));
+      window.dispatchEvent(
+        new CustomEvent("profile-updated"),
+      );
 
       if (pfpPreviewUrl) {
         URL.revokeObjectURL(pfpPreviewUrl);
