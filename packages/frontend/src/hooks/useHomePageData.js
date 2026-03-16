@@ -10,7 +10,7 @@ import {
  * Normalizes a TMDB item so movie/TV fields
  * are consistent across the app.
  */
-function normalize(item) {
+export function normalize(item) {
   return {
     ...item,
     title: item.title || item.name,
@@ -27,7 +27,7 @@ function normalize(item) {
  * Deduplicates an array of films by tmdbId,
  * keeping the first occurrence.
  */
-function dedup(films) {
+export function dedup(films) {
   const seen = new Set();
   return films.filter((f) => {
     const key = `${f.type}-${f.tmdbId}`;
@@ -247,8 +247,8 @@ export function buildCuratedLists(pool) {
     .filter(Boolean);
 }
 
-export default function useHomePageData() {
-  const [data, setData] = useState({
+export function getInitialHomePageData() {
+  return {
     loading: true,
     error: false,
     hero: null,
@@ -260,7 +260,104 @@ export default function useHomePageData() {
     mostDiscussed: [],
     pulseCards: [],
     curatedLists: [],
-  });
+  };
+}
+
+export async function loadHomePageData({
+  fetchTrendingFn = fetchTrending,
+  fetchNewReleasesFn = fetchNewReleases,
+  fetchGenresFn = fetchGenres,
+  fetchDiscoverFn = fetchDiscover,
+  now = new Date(),
+} = {}) {
+  try {
+    // Build upcoming date range
+    const today = now.toISOString().slice(0, 10);
+    const futureDate = new Date(
+      now.getTime() + 90 * 86400000,
+    )
+      .toISOString()
+      .slice(0, 10);
+
+    const [
+      trending,
+      nowPlaying,
+      genres,
+      upcoming,
+    ] = await Promise.allSettled([
+      fetchTrendingFn("week"),
+      fetchNewReleasesFn(),
+      fetchGenresFn(),
+      fetchDiscoverFn({
+        sort_by: "popularity.desc",
+        "primary_release_date.gte": today,
+        "primary_release_date.lte": futureDate,
+      }),
+    ]);
+
+    const trendingList = (
+      trending.status === "fulfilled"
+        ? trending.value
+        : []
+    ).map(normalize);
+
+    const nowPlayingList = (
+      nowPlaying.status === "fulfilled"
+        ? nowPlaying.value
+        : []
+    ).map(normalize);
+
+    const upcomingList = (
+      upcoming.status === "fulfilled"
+        ? upcoming.value
+        : []
+    ).map(normalize);
+
+    const genreMap =
+      genres.status === "fulfilled"
+        ? genres.value
+        : null;
+
+    const hero = pickHero(
+      trendingList,
+      nowPlayingList,
+    );
+
+    // Combined pool for derived sections
+    const pool = dedup([
+      ...trendingList,
+      ...nowPlayingList,
+    ]);
+
+    return {
+      loading: false,
+      error: false,
+      hero,
+      genreMap,
+      trending: trendingList.slice(0, 8),
+      nowPlaying: nowPlayingList,
+      upcoming: upcomingList
+        .filter(
+          (f) => f.posterPath && f.releaseDate > today,
+        )
+        .slice(0, 6),
+      categorySpotlights:
+        buildCategorySpotlights(pool),
+      mostDiscussed: buildMostDiscussed(pool),
+      pulseCards: buildPulseCards(pool),
+      curatedLists: buildCuratedLists(pool),
+    };
+  } catch {
+    return {
+      ...getInitialHomePageData(),
+      loading: false,
+      error: true,
+    };
+  }
+}
+
+export default function useHomePageData() {
+  const [data, setData] = useState(getInitialHomePageData);
 
   const fetched = useRef(false);
 
@@ -268,99 +365,7 @@ export default function useHomePageData() {
     if (fetched.current) return;
     fetched.current = true;
 
-    async function load() {
-      try {
-        // Build upcoming date range
-        const today = new Date()
-          .toISOString()
-          .slice(0, 10);
-        const futureDate = new Date(
-          Date.now() + 90 * 86400000,
-        )
-          .toISOString()
-          .slice(0, 10);
-
-        const [
-          trending,
-          nowPlaying,
-          genres,
-          upcoming,
-        ] = await Promise.allSettled([
-          fetchTrending("week"),
-          fetchNewReleases(),
-          fetchGenres(),
-          fetchDiscover({
-            sort_by: "popularity.desc",
-            "primary_release_date.gte": today,
-            "primary_release_date.lte":
-              futureDate,
-          }),
-        ]);
-
-        const trendingList = (
-          trending.status === "fulfilled"
-            ? trending.value
-            : []
-        ).map(normalize);
-
-        const nowPlayingList = (
-          nowPlaying.status === "fulfilled"
-            ? nowPlaying.value
-            : []
-        ).map(normalize);
-
-        const upcomingList = (
-          upcoming.status === "fulfilled"
-            ? upcoming.value
-            : []
-        ).map(normalize);
-
-        const genreMap =
-          genres.status === "fulfilled"
-            ? genres.value
-            : null;
-
-        const hero = pickHero(
-          trendingList,
-          nowPlayingList,
-        );
-
-        // Combined pool for derived sections
-        const pool = dedup([
-          ...trendingList,
-          ...nowPlayingList,
-        ]);
-
-        setData({
-          loading: false,
-          error: false,
-          hero,
-          genreMap,
-          trending: trendingList.slice(0, 8),
-          nowPlaying: nowPlayingList,
-          upcoming: upcomingList
-            .filter(
-              (f) =>
-                f.posterPath &&
-                f.releaseDate > today,
-            )
-            .slice(0, 6),
-          categorySpotlights:
-            buildCategorySpotlights(pool),
-          mostDiscussed: buildMostDiscussed(pool),
-          pulseCards: buildPulseCards(pool),
-          curatedLists: buildCuratedLists(pool),
-        });
-      } catch {
-        setData((prev) => ({
-          ...prev,
-          loading: false,
-          error: true,
-        }));
-      }
-    }
-
-    load();
+    loadHomePageData().then(setData);
   }, []);
 
   return data;
