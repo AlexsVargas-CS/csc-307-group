@@ -17,7 +17,16 @@ const userSchema = new mongoose.Schema({
   favoriteMovies: {
     type: [Number],
     default: [],
-  }
+  },
+  watchlist: {
+    type: [Number],
+    default: [],
+  },
+  watchlistVisibility: {
+    type: String,
+    enum: ["public", "private"],
+    default: "public",
+  },
 });
 
 export default mongoose.model("User", userSchema);
