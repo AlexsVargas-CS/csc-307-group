@@ -83,6 +83,35 @@ export default function Watchlist() {
         return bYear - aYear;
       }
 
+      if (sortBy === "rating-desc") {
+        const aRating = Number(a.avgRating) || 0;
+        const bRating = Number(b.avgRating) || 0;
+        return bRating - aRating;
+      }
+
+      if (sortBy === "rating-asc") {
+        const aRating = Number(a.avgRating) || 0;
+        const bRating = Number(b.avgRating) || 0;
+        return aRating - bRating;
+      }
+
+      const categorySortMatch = sortBy.match(
+        /^(acting|cinematography|soundtrack|soundDesign|artDirection|writing)-(asc|desc)$/
+      );
+
+      if (categorySortMatch) {
+        const [, category, direction] = categorySortMatch;
+
+        const aScore = getCommunityCategoryAverage(a, category);
+        const bScore = getCommunityCategoryAverage(b, category);
+
+        if (direction === "desc") {
+          return bScore - aScore;
+        }
+
+        return aScore - bScore;
+      }
+
       return 0;
     });
 
@@ -97,6 +126,10 @@ export default function Watchlist() {
     );
   }
 
+  function getCommunityCategoryAverage(film, category) {
+    return Number(film.communityCategoryAverages?.[category]?.average) || 0;
+  }
+  
   useEffect(() => {
     let cancelled = false;
 
@@ -105,11 +138,13 @@ export default function Watchlist() {
       setMessage("");
 
       try {
-        const watchlistRes = await fetch(`${API_PREFIX}/api/users/${username}/watchlist`, {
-          headers: {
-            ...authHeaders(),
-          },
-        });
+        const watchlistRes = await fetch( `${API_PREFIX}/api/users/${username}/watchlist/details`,
+          {
+            headers: {
+              ...authHeaders(),
+            },
+          }
+        );
         if (!watchlistRes.ok) {
           if (watchlistRes.status === 403) {
             throw new Error("This watchlist is private.");
@@ -190,11 +225,9 @@ export default function Watchlist() {
     let cancelled = false;
 
     async function loadWatchlistMovies() {
-      const ids = (profile?.watchlist || [])
-        .map((id) => Number(id))
-        .filter((id) => Number.isInteger(id) && id > 0);
+      const items = Array.isArray(profile?.items) ? profile.items : [];
 
-      if (!ids.length) {
+      if (!items.length) {
         setWatchlistMovies([]);
         return;
       }
@@ -204,8 +237,8 @@ export default function Watchlist() {
 
       try {
         const movies = await Promise.all(
-          ids.map(async (tmdbId) => {
-            const res = await fetch(`${API_PREFIX}/api/tmdb/movie/${tmdbId}`);
+          items.map(async (entry) => {
+            const res = await fetch(`${API_PREFIX}/api/tmdb/movie/${entry.tmdbId}`);
 
             if (!res.ok) {
               const txt = await res.text();
@@ -216,7 +249,7 @@ export default function Watchlist() {
             const item = data.item;
 
             return {
-              tmdbId: item.tmdbId ?? item.id ?? tmdbId,
+              tmdbId: item.tmdbId ?? item.id ?? entry.tmdbId,
               title: item.title ?? item.name ?? "Untitled",
               posterPath: item.posterPath ?? item.poster_path ?? "",
               genreIds:
@@ -226,7 +259,10 @@ export default function Watchlist() {
                 [],
               type: "movie",
               releaseDate: item.releaseDate ?? item.release_date ?? "",
-              voteAverage: item.voteAverage ?? item.vote_average ?? null,
+              avgRating: entry.avgRating ?? null,
+              ratingCount: entry.ratingCount ?? 0,
+              userRating: entry.userRating ?? null,
+              communityCategoryAverages: entry.communityCategoryAverages ?? {},
             };
           })
         );
@@ -309,7 +345,7 @@ export default function Watchlist() {
           </div>
 
           <div className="text-sm text-gray-400">
-            {(profile.watchlist || []).length} movie{(profile.watchlist || []).length === 1 ? "" : "s"}
+            {(profile.items || []).length} movie{(profile.items || []).length === 1 ? "" : "s"}
           </div>
         </div>
 
@@ -388,6 +424,26 @@ export default function Watchlist() {
               <option value="title-desc">Title (Z–A)</option>
               <option value="year-desc">Year (Newest)</option>
               <option value="year-asc">Year (Oldest)</option>
+              <option value="rating-desc">Rating (Highest)</option>
+              <option value="rating-asc">Rating (Lowest)</option>
+
+              <option value="acting-desc">Acting (Highest)</option>
+              <option value="acting-asc">Acting (Lowest)</option>
+
+              <option value="cinematography-desc">Cinematography (Highest)</option>
+              <option value="cinematography-asc">Cinematography (Lowest)</option>
+
+              <option value="soundtrack-desc">Soundtrack (Highest)</option>
+              <option value="soundtrack-asc">Soundtrack (Lowest)</option>
+
+              <option value="soundDesign-desc">Sound Design (Highest)</option>
+              <option value="soundDesign-asc">Sound Design (Lowest)</option>
+
+              <option value="artDirection-desc">Art Direction (Highest)</option>
+              <option value="artDirection-asc">Art Direction (Lowest)</option>
+
+              <option value="writing-desc">Writing (Highest)</option>
+              <option value="writing-asc">Writing (Lowest)</option>
             </select>
 
             <button
@@ -440,7 +496,7 @@ export default function Watchlist() {
 
       <button
         onClick={async () => {
-          const res = await fetch(`${API_PREFIX}/api/watchlist/155`, {
+          const res = await fetch(`${API_PREFIX}/api/watchlist/550`, {
             method: "POST",
             headers: {
               ...authHeaders(),
