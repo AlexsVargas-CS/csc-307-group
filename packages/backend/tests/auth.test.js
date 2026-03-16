@@ -38,6 +38,14 @@ const { default: app } = await import("../src/app.js");
 beforeEach(() => {
   userStore.clear();
   bcryptMock.compare.mockResolvedValue(false);
+  bcryptMock.genSalt.mockResolvedValue("salt");
+  bcryptMock.hash.mockImplementation(async (pwd) => `hashed:${pwd}`);
+  jwtMock.sign.mockImplementation((payload, secret, options, cb) =>
+    cb(null, `token:${payload.username}`),
+  );
+  jwtMock.verify.mockImplementation((token, secret, cb) =>
+    cb(null, { username: token.replace(/^token:/, "") }),
+  );
 });
 
 describe("Auth", () => {
@@ -106,5 +114,49 @@ describe("Auth", () => {
     expect(res.body.token).toBe("token:dana");
     expect(bcryptMock.compare).toHaveBeenCalled();
     expect(jwtMock.sign).toHaveBeenCalled();
+  });
+
+  test("POST /signup returns 500 when password hashing fails", async () => {
+    bcryptMock.genSalt.mockRejectedValueOnce(new Error("salt failed"));
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await request(app)
+      .post("/signup")
+      .send({ username: "erin", pwd: "password123" });
+
+    errorSpy.mockRestore();
+    expect(res.status).toBe(500);
+    expect(res.text).toBe("Server error");
+  });
+
+  test("POST /login returns 500 when token generation fails", async () => {
+    await request(app).post("/signup").send({ username: "fred", pwd: "goodpass" });
+    bcryptMock.compare.mockResolvedValue(true);
+    jwtMock.sign.mockImplementationOnce((payload, secret, options, cb) =>
+      cb(new Error("jwt failed")),
+    );
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await request(app)
+      .post("/login")
+      .send({ username: "fred", pwd: "goodpass" });
+
+    errorSpy.mockRestore();
+    expect(res.status).toBe(500);
+    expect(res.text).toBe("Server error");
+  });
+
+  test("authenticateUser returns 401 for invalid JWTs", async () => {
+    jwtMock.verify.mockImplementationOnce((token, secret, cb) =>
+      cb(new Error("bad token"), null),
+    );
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    const res = await request(app)
+      .get("/api/me")
+      .set("Authorization", "Bearer token:broken");
+
+    logSpy.mockRestore();
+    expect(res.status).toBe(401);
   });
 });
