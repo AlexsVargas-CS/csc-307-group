@@ -33,6 +33,7 @@ export default function LoginPage({
     } catch (err) {
       setError(err.message);
     }
+    window.location.reload()
   }
 
   return (
