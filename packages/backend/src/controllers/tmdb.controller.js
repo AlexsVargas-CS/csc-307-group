@@ -44,6 +44,140 @@ export const searchTmdb = asyncHandler(async (req, res) => {
   });
 });
 
+export const getTrending = asyncHandler(
+  async (req, res) => {
+    const timeWindow = req.params.timeWindow === "day"
+      ? "day"
+      : "week";
+
+    const data = await tmdbRequest(
+      `/trending/all/${timeWindow}`,
+      { page: req.query.page || 1 }
+    );
+
+    const results = (data.results || []).map(
+      (item) => ({
+        tmdbId: item.id,
+        type: item.media_type === "tv" ? "tv" : "movie",
+        title: item.title || item.name,
+        posterPath: item.poster_path || null,
+        backdropPath: item.backdrop_path || null,
+        overview: item.overview || "",
+        voteAverage: item.vote_average ?? null,
+        voteCount: item.vote_count ?? 0,
+        popularity: item.popularity ?? 0,
+        genreIds: item.genre_ids || [],
+        releaseDate:
+          item.release_date ||
+          item.first_air_date ||
+          null
+      })
+    );
+
+    res.status(200).json({ results });
+  }
+);
+
+export const getNowPlaying = asyncHandler(
+  async (req, res) => {
+    const data = await tmdbRequest("/movie/now_playing", {
+      page: req.query.page || 1
+    });
+
+    const results = (data.results || []).map(
+      (item) => ({
+        tmdbId: item.id,
+        type: "movie",
+        title: item.title,
+        posterPath: item.poster_path || null,
+        backdropPath: item.backdrop_path || null,
+        overview: item.overview || "",
+        voteAverage: item.vote_average ?? null,
+        voteCount: item.vote_count ?? 0,
+        popularity: item.popularity ?? 0,
+        genreIds: item.genre_ids || [],
+        releaseDate: item.release_date || null
+      })
+    );
+
+    res.status(200).json({ results });
+  }
+);
+
+export const discoverMovies = asyncHandler(
+  async (req, res) => {
+    const params = { page: req.query.page || 1 };
+
+    const allowedParams = [
+      "with_genres",
+      "sort_by",
+      "primary_release_date.gte",
+      "primary_release_date.lte",
+      "vote_average.gte",
+      "vote_count.gte",
+    ];
+    for (const key of allowedParams) {
+      if (req.query[key]) {
+        params[key] = req.query[key];
+      }
+    }
+
+    const data = await tmdbRequest(
+      "/discover/movie",
+      params
+    );
+
+    const results = (data.results || []).map(
+      (item) => ({
+        tmdbId: item.id,
+        type: "movie",
+        title: item.title,
+        posterPath: item.poster_path || null,
+        backdropPath: item.backdrop_path || null,
+        overview: item.overview || "",
+        voteAverage: item.vote_average ?? null,
+        voteCount: item.vote_count ?? 0,
+        popularity: item.popularity ?? 0,
+        genreIds: item.genre_ids || [],
+        releaseDate: item.release_date || null
+      })
+    );
+
+    res.status(200).json({ results });
+  }
+);
+
+export const getGenres = asyncHandler(
+  async (_req, res) => {
+    const data = await tmdbRequest(
+      "/genre/movie/list"
+    );
+
+    res
+      .status(200)
+      .json({ genres: data.genres || [] });
+  }
+);
+
+export const getSimilar = asyncHandler(async (req, res) => {
+  const { type, tmdbId } = detailsSchema.parse(req.params);
+
+  const data = await tmdbRequest(
+    `/${type}/${tmdbId}/similar`,
+    { page: 1 }
+  );
+
+  const results = (data.results || []).slice(0, 8).map((item) => ({
+    tmdbId: item.id,
+    type,
+    title: getTitle(type, item),
+    posterPath: item.poster_path || null,
+    releaseDate: getReleaseDate(type, item)
+  }));
+
+  res.status(200).json({ results });
+});
+
 export const getTmdbDetails = asyncHandler(async (req, res) => {
   const { type, tmdbId } = detailsSchema.parse(req.params);
 

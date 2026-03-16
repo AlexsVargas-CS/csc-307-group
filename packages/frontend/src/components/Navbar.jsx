@@ -1,22 +1,18 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-
-function getUsernameFromToken() {
-  const token = localStorage.getItem("token");
-  if (!token) return null;
-
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.username;
-  } catch {
-    return null;
-  }
-}
+import { useState, useRef, useEffect } from "react";
+import {
+  Link,
+  useNavigate
+} from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Navbar() {
+  const { isAuthenticated, user, logout } =
+    useAuth();
   const [query, setQuery] = useState("");
   const [username, setUsername] = useState(null);
   const [profilePictureUrl, setProfilePictureUrl] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const navigate = useNavigate();
 
   const API_PREFIX =
@@ -57,12 +53,32 @@ export default function Navbar() {
 
     loadProfilePicture();
   }, [API_PREFIX]);
+    function handleClickOutside(e) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+    return () =>
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+  }, []);
 
   function handleSubmit(e) {
     e.preventDefault();
     const trimmed = query.trim();
     if (!trimmed) return;
-    navigate(`/search?query=${encodeURIComponent(trimmed)}`);
+    navigate(
+      `/search?query=${encodeURIComponent(trimmed)}`
+    );
     setQuery("");
   }
 
@@ -71,7 +87,7 @@ export default function Navbar() {
       <div className="flex items-center justify-between">
         <Link
           to="/"
-          className="text-xl font-bold tracking-wide text-amber-400"
+          className="text-xl font-bold italic tracking-wide text-amber-400"
         >
           Showme
         </Link>
@@ -84,7 +100,9 @@ export default function Navbar() {
             type="text"
             placeholder="Search films..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) =>
+              setQuery(e.target.value)
+            }
             className="w-full rounded-lg bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-400 outline-none ring-1 ring-gray-700 focus:ring-amber-400"
           />
         </form>

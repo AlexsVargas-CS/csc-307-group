@@ -4,7 +4,7 @@ import FavoriteMoviesModal from "../components/FavoriteMoviesModal.jsx";
 
 const API_PREFIX =
   import.meta.env.VITE_API_URL ||
-  "http://localhost:8000";
+  "http://localhost:3001";
 
 function authHeaders() {
   const token = localStorage.getItem("token");
