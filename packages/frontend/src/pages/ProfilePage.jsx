@@ -534,11 +534,6 @@ export default function ProfilePage() {
           setFavoritesModalOpen(false);
           setActiveFavoriteSlot(null);
         }}
-        initialFavorites={
-          activeFavoriteSlot !== null && favoriteMovieDetails[activeFavoriteSlot]
-            ? [favoriteMovieDetails[activeFavoriteSlot]]
-            : []
-        }
         onSave={saveFavoriteMovies}
       />
     </main>
