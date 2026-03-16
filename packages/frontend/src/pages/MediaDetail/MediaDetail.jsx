@@ -124,13 +124,14 @@ export default function MediaDetail() {
       ]);
 
     setDimensions(dims);
+    console.log(ratingsData.ratings);
     setReviews(
       (ratingsData.ratings || []).map((r) => ({
         id: r._id,
         userId: r.userId?._id || r.userId,
         username:
           r.userId?.username || "Anonymous",
-        avatarUrl: null,
+        avatarUrl: r.userId?.profilePictureUrl || null,
         overallStarRating: r.score,
         content: r.reviewText || "",
         likeCount: 0,

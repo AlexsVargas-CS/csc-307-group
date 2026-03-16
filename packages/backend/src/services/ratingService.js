@@ -65,7 +65,7 @@ export const getRatingsByFilm = async (
   const skip = (page - 1) * limit;
   const [ratings, total] = await Promise.all([
     Rating.find({ filmId })
-      .populate("userId", "username")
+      .populate("userId", "username profilePictureUrl")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
