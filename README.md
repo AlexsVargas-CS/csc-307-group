@@ -1,5 +1,8 @@
 Our application is called Showme, and it is a media (movies & TV) rating app. We developed it to be like a social network, where users can see others' watchlists, their ratings, and explore thousands of media. A user will be able to add another user and explore their ratings and recommend new media based on what users prefer in common with another. There will also be lots of trending movies, and recommendations based on what you rate & watch. There is also organization by top ratings by categories and simple sorting methods.
 
+Architecture + UML documentation:
+[docs/README.md](docs/README.md)
+
 UI Prototype last updated approximately 3 weeks ago:
 https://www.figma.com/board/hdZK3xvzd8q0w9ZeBUTSau/UML-DIagram?node-id=5-1103&t=8jWiTwnBWy0UW6NY-1
 
